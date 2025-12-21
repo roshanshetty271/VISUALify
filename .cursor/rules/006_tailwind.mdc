@@ -1,0 +1,238 @@
+---
+description: Tailwind CSS patterns and custom animations
+globs: "**/*.tsx,tailwind.config.js,src/app/globals.css"
+alwaysApply: false
+---
+
+# Tailwind CSS Rules
+
+## Class Organization
+
+Order classes logically:
+1. Layout (flex, grid, position)
+2. Sizing (w, h, p, m)
+3. Typography (text, font)
+4. Colors (bg, text color, border)
+5. Effects (shadow, opacity, blur)
+6. Transitions/Animations
+
+```tsx
+// ✅ Organized
+<div className="flex items-center justify-between w-full p-4 text-sm text-white bg-gray-900 rounded-lg shadow-lg transition-all duration-300">
+
+// ❌ Random order
+<div className="shadow-lg text-sm flex bg-gray-900 p-4 rounded-lg text-white items-center w-full">
+```
+
+## Custom Animations
+
+### Tailwind Config
+```js
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      animation: {
+        'pulse-bpm': 'pulse var(--pulse-duration, 1s) ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite',
+        'orbit': 'orbit var(--orbit-duration, 10s) linear infinite',
+        'float': 'float 3s ease-in-out infinite',
+      },
+      keyframes: {
+        pulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.8' },
+        },
+        glow: {
+          '0%, 100%': { filter: 'drop-shadow(0 0 10px var(--glow-color, #22c55e))' },
+          '50%': { filter: 'drop-shadow(0 0 30px var(--glow-color, #22c55e))' },
+        },
+        orbit: {
+          '0%': { transform: 'rotate(0deg) translateX(var(--orbit-radius, 100px)) rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg) translateX(var(--orbit-radius, 100px)) rotate(-360deg)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+      },
+    },
+  },
+};
+```
+
+### CSS Custom Properties for Dynamic Values
+```css
+/* src/app/globals.css */
+:root {
+  --pulse-duration: 1s;
+  --glow-color: #22c55e;
+  --orbit-radius: 100px;
+  --orbit-duration: 10s;
+}
+```
+
+### Setting CSS Variables from React
+```tsx
+'use client';
+
+import { useEffect } from 'react';
+
+export function useBPM(tempo: number) {
+  useEffect(() => {
+    const pulseDuration = 60 / tempo; // seconds per beat
+    document.documentElement.style.setProperty(
+      '--pulse-duration',
+      `${pulseDuration}s`
+    );
+  }, [tempo]);
+}
+```
+
+## Color Classes
+
+### Spotify Green Theme
+```tsx
+// Primary green
+className="bg-[#1DB954] text-black"
+
+// With Tailwind colors
+className="bg-green-500 hover:bg-green-600"
+
+// Custom in config
+// tailwind.config.js
+colors: {
+  spotify: {
+    green: '#1DB954',
+    black: '#191414',
+  }
+}
+// Usage
+className="bg-spotify-green text-spotify-black"
+```
+
+### Dark Mode
+```tsx
+// Automatic dark mode support
+className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+
+// In tailwind.config.js
+module.exports = {
+  darkMode: 'class', // or 'media'
+}
+```
+
+## Responsive Design
+
+### Mobile-First
+```tsx
+// Base = mobile, then add larger breakpoints
+<div className="p-4 md:p-6 lg:p-8">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+<div className="text-sm md:text-base lg:text-lg">
+```
+
+### Container
+```tsx
+<div className="container mx-auto px-4">
+```
+
+## Common Patterns
+
+### Centered Content
+```tsx
+// Flex center
+<div className="flex items-center justify-center min-h-screen">
+
+// Grid center
+<div className="grid place-items-center min-h-screen">
+```
+
+### Card
+```tsx
+<div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+```
+
+### Button
+```tsx
+<button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors">
+```
+
+### Glass Effect
+```tsx
+<div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl">
+```
+
+## Animation Utilities
+
+### Transitions
+```tsx
+// All properties
+className="transition-all duration-300"
+
+// Specific properties
+className="transition-colors duration-200"
+className="transition-transform duration-500"
+className="transition-opacity duration-150"
+```
+
+### Timing Functions
+```tsx
+className="ease-linear"
+className="ease-in"
+className="ease-out"
+className="ease-in-out"
+```
+
+### Reduced Motion
+```tsx
+// Respect user preference
+className="animate-pulse motion-reduce:animate-none"
+className="transition-transform motion-reduce:transition-none"
+```
+
+## SVG Styling
+
+```tsx
+// Fill and stroke
+<circle className="fill-green-500 stroke-white stroke-2" />
+
+// Hover states
+<circle className="fill-green-500 hover:fill-green-400 transition-colors" />
+
+// Drop shadow for glow
+<circle className="drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+```
+
+## Avoid These Patterns
+
+❌ Inline styles when Tailwind class exists
+```tsx
+// Bad
+<div style={{ marginTop: '16px' }}>
+// Good
+<div className="mt-4">
+```
+
+❌ `@apply` for one-off styles
+```css
+/* Bad - just use the class */
+.my-button {
+  @apply px-4 py-2 bg-blue-500;
+}
+```
+
+❌ Too many arbitrary values
+```tsx
+// Bad - add to config instead
+<div className="w-[347px] h-[892px] bg-[#1a2b3c]">
+
+// Good - use config or standard values
+<div className="w-80 h-full bg-gray-800">
+```
+
+❌ Conflicting classes
+```tsx
+// Bad
+<div className="flex block hidden">
+```

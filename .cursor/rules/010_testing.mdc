@@ -1,0 +1,281 @@
+---
+description: Testing strategy with Vitest and React Testing Library
+globs: "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},src/__tests__/**/*"
+alwaysApply: false
+---
+
+# Testing Rules
+
+## Stack
+
+- **Vitest** - Test runner (fast, ESM native)
+- **React Testing Library** - Component testing
+- **MSW** - API mocking (optional)
+
+## Setup
+
+```tsx
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+```tsx
+// src/test/setup.ts
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock next-auth
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({
+    data: { accessToken: 'mock-token' },
+    status: 'authenticated',
+  }),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+```
+
+## What to Test
+
+### High Priority (Test These)
+- Custom hooks (useNowPlaying, useAudioFeatures)
+- Utility functions (color mapping, scales)
+- Store actions and selectors
+- Critical user flows (login, mode switching)
+
+### Medium Priority
+- Component rendering with different props
+- Error states
+- Loading states
+
+### Low Priority (Skip for MVP)
+- Visual regression
+- E2E tests
+- Animation timing
+
+## Testing Utilities
+
+```tsx
+// src/lib/utils/colors.ts
+export function energyToColor(energy: number): string {
+  // 0 = blue, 0.5 = green, 1 = red
+  const hue = (1 - energy) * 240;
+  return `hsl(${hue}, 70%, 50%)`;
+}
+```
+
+```tsx
+// src/lib/utils/colors.test.ts
+import { describe, it, expect } from 'vitest';
+import { energyToColor } from './colors';
+
+describe('energyToColor', () => {
+  it('returns blue for low energy', () => {
+    expect(energyToColor(0)).toBe('hsl(240, 70%, 50%)');
+  });
+
+  it('returns green for medium energy', () => {
+    expect(energyToColor(0.5)).toBe('hsl(120, 70%, 50%)');
+  });
+
+  it('returns red for high energy', () => {
+    expect(energyToColor(1)).toBe('hsl(0, 70%, 50%)');
+  });
+});
+```
+
+## Testing Custom Hooks
+
+```tsx
+// src/hooks/useBPM.test.ts
+import { renderHook } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useBPM } from './useBPM';
+
+describe('useBPM', () => {
+  beforeEach(() => {
+    vi.spyOn(document.documentElement.style, 'setProperty');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('sets pulse duration based on tempo', () => {
+    renderHook(() => useBPM(120)); // 120 BPM
+
+    expect(document.documentElement.style.setProperty).toHaveBeenCalledWith(
+      '--pulse-duration',
+      '0.5s' // 60/120 = 0.5 seconds per beat
+    );
+  });
+
+  it('handles slow tempo', () => {
+    renderHook(() => useBPM(60)); // 60 BPM
+
+    expect(document.documentElement.style.setProperty).toHaveBeenCalledWith(
+      '--pulse-duration',
+      '1s'
+    );
+  });
+});
+```
+
+## Testing Zustand Stores
+
+```tsx
+// src/stores/usePlayerStore.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { usePlayerStore } from './usePlayerStore';
+
+describe('usePlayerStore', () => {
+  beforeEach(() => {
+    // Reset store before each test
+    usePlayerStore.setState({
+      currentTrack: null,
+      audioFeatures: null,
+      recentTracks: [],
+      isPlaying: false,
+      error: null,
+    });
+  });
+
+  it('sets current track', () => {
+    const mockTrack = { id: '1', name: 'Test Track', artist: 'Test Artist' };
+    
+    usePlayerStore.getState().setCurrentTrack(mockTrack);
+    
+    expect(usePlayerStore.getState().currentTrack).toEqual(mockTrack);
+  });
+
+  it('resets to initial state', () => {
+    usePlayerStore.getState().setCurrentTrack({ id: '1', name: 'Test' });
+    usePlayerStore.getState().setIsPlaying(true);
+    
+    usePlayerStore.getState().reset();
+    
+    expect(usePlayerStore.getState().currentTrack).toBeNull();
+    expect(usePlayerStore.getState().isPlaying).toBe(false);
+  });
+});
+```
+
+## Testing Components
+
+```tsx
+// src/components/visualizer/NowPlaying.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { NowPlaying } from './NowPlaying';
+
+// Mock the store
+vi.mock('@/stores', () => ({
+  useCurrentTrack: () => ({
+    id: '1',
+    name: 'Test Song',
+    artist: 'Test Artist',
+    albumArt: 'https://example.com/image.jpg',
+  }),
+  useIsPlaying: () => true,
+}));
+
+describe('NowPlaying', () => {
+  it('displays track name and artist', () => {
+    render(<NowPlaying />);
+
+    expect(screen.getByText('Test Song')).toBeInTheDocument();
+    expect(screen.getByText('Test Artist')).toBeInTheDocument();
+  });
+
+  it('shows album art', () => {
+    render(<NowPlaying />);
+
+    const img = screen.getByRole('img');
+    expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
+  });
+});
+```
+
+## Testing Empty States
+
+```tsx
+// Mock store with null track
+vi.mock('@/stores', () => ({
+  useCurrentTrack: () => null,
+  useIsPlaying: () => false,
+}));
+
+it('shows empty state when no track', () => {
+  render(<NowPlaying />);
+
+  expect(screen.getByText(/start playing/i)).toBeInTheDocument();
+});
+```
+
+## Test File Naming
+
+```
+src/
+├── lib/
+│   └── utils/
+│       ├── colors.ts
+│       └── colors.test.ts      # Co-located
+├── hooks/
+│   ├── useBPM.ts
+│   └── useBPM.test.ts          # Co-located
+├── components/
+│   └── visualizer/
+│       ├── NowPlaying.tsx
+│       └── NowPlaying.test.tsx # Co-located
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Watch mode
+npm test -- --watch
+
+# Coverage
+npm test -- --coverage
+
+# Specific file
+npm test -- src/lib/utils/colors.test.ts
+```
+
+## Skip Tests for MVP
+
+Focus on utilities and hooks first. Skip these for initial build:
+- E2E tests
+- Visual tests
+- Animation tests
+- Integration tests with real Spotify API

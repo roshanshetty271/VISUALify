@@ -1,0 +1,272 @@
+---
+description: D3.js integration patterns with React
+globs: "src/components/visualizer/**/*.tsx,src/hooks/useD3*.ts,src/hooks/useForce*.ts"
+alwaysApply: false
+---
+
+# D3.js + React Integration Rules
+
+## Core Principle: React Renders, D3 Calculates
+
+Let React handle DOM rendering. Use D3 only for:
+- Scales (linear, ordinal, color)
+- Force simulations
+- Layouts (pie, tree, etc.)
+- Interpolations and transitions
+- Math utilities
+
+## Pattern 1: D3 for Calculations Only
+
+```tsx
+'use client';
+
+import { useMemo } from 'react';
+import * as d3 from 'd3';
+import type { Track } from '@/types';
+
+interface GalaxyModeProps {
+  tracks: Track[];
+  width: number;
+  height: number;
+}
+
+export function GalaxyMode({ tracks, width, height }: GalaxyModeProps) {
+  // D3 calculates scales (memoized)
+  const colorScale = useMemo(
+    () => d3.scaleLinear<string>()
+      .domain([0, 0.5, 1])
+      .range(['#3b82f6', '#22c55e', '#ef4444']),
+    []
+  );
+
+  const sizeScale = useMemo(
+    () => d3.scaleLinear()
+      .domain([0, 1])
+      .range([20, 60]),
+    []
+  );
+
+  const xScale = useMemo(
+    () => d3.scaleLinear()
+      .domain([0, tracks.length])
+      .range([50, width - 50]),
+    [tracks.length, width]
+  );
+
+  // React renders
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+      {tracks.map((track, i) => (
+        <circle
+          key={track.id}
+          cx={xScale(i)}
+          cy={height / 2}
+          r={sizeScale(track.energy ?? 0.5)}
+          fill={colorScale(track.energy ?? 0.5)}
+          className="transition-all duration-300"
+        />
+      ))}
+    </svg>
+  );
+}
+```
+
+## Pattern 2: useD3 Hook for DOM Manipulation
+
+When D3 MUST control the DOM (axes, complex transitions):
+
+```tsx
+// src/hooks/useD3.ts
+'use client';
+
+import { useRef, useEffect } from 'react';
+import * as d3 from 'd3';
+
+export function useD3<T extends SVGElement>(
+  renderFn: (selection: d3.Selection<T, unknown, null, undefined>) => void,
+  dependencies: React.DependencyList
+) {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      // Clear previous content
+      d3.select(ref.current).selectAll('*').remove();
+      // Render new content
+      renderFn(d3.select(ref.current));
+    }
+  }, dependencies);
+
+  return ref;
+}
+
+// Usage
+function Axis({ scale, transform }: AxisProps) {
+  const ref = useD3<SVGGElement>(
+    (g) => g.call(d3.axisBottom(scale)),
+    [scale]
+  );
+
+  return <g ref={ref} transform={transform} />;
+}
+```
+
+## Pattern 3: Force Simulation Hook
+
+```tsx
+// src/hooks/useForceSimulation.ts
+'use client';
+
+import { useState, useEffect, useMemo, useRef } from 'react';
+import * as d3 from 'd3';
+
+interface SimNode extends d3.SimulationNodeDatum {
+  id: string;
+  // Add your custom properties
+}
+
+export function useForceSimulation<T extends SimNode>(
+  data: T[],
+  width: number,
+  height: number
+) {
+  const [nodes, setNodes] = useState<T[]>([]);
+  const simulationRef = useRef<d3.Simulation<T, undefined> | null>(null);
+
+  // Create simulation once
+  const simulation = useMemo(() => {
+    const sim = d3.forceSimulation<T>()
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('charge', d3.forceManyBody().strength(-100))
+      .force('collision', d3.forceCollide().radius(30));
+    
+    simulationRef.current = sim;
+    return sim;
+  }, [width, height]);
+
+  // Update nodes when data changes
+  useEffect(() => {
+    // Preserve existing positions
+    const oldNodes = new Map(nodes.map(n => [n.id, n]));
+    const newNodes = data.map(d => ({
+      ...d,
+      x: oldNodes.get(d.id)?.x ?? width / 2,
+      y: oldNodes.get(d.id)?.y ?? height / 2,
+    }));
+
+    simulation.nodes(newNodes);
+    simulation.alpha(0.3).restart();
+
+    simulation.on('tick', () => {
+      setNodes([...simulation.nodes()]);
+    });
+
+    return () => {
+      simulation.on('tick', null);
+    };
+  }, [data, simulation, width, height]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      simulationRef.current?.stop();
+    };
+  }, []);
+
+  return nodes;
+}
+```
+
+## D3 Imports (Tree-Shaking)
+
+```tsx
+// ✅ Import only what you need
+import { scaleLinear, scaleOrdinal } from 'd3-scale';
+import { forceSimulation, forceCenter, forceManyBody } from 'd3-force';
+
+// ❌ Don't import everything
+import * as d3 from 'd3'; // 500KB+ unminified
+```
+
+For this project, acceptable to use `import * as d3` for simplicity, but be aware of bundle size.
+
+## Color Scales
+
+```tsx
+// Energy to color (blue → green → red)
+const energyColor = d3.scaleLinear<string>()
+  .domain([0, 0.5, 1])
+  .range(['#3b82f6', '#22c55e', '#ef4444']);
+
+// Valence to color (sad → happy)
+const valenceColor = d3.scaleLinear<string>()
+  .domain([0, 1])
+  .range(['#6366f1', '#fbbf24']);
+
+// Categorical (for different modes/types)
+const categoryColor = d3.scaleOrdinal<string>()
+  .domain(['galaxy', 'terrain', 'neural', 'river'])
+  .range(['#8b5cf6', '#06b6d4', '#f97316', '#22c55e']);
+```
+
+## Size Scales
+
+```tsx
+// Loudness to radius (normalize -60 to 0 dB)
+const sizeScale = d3.scaleLinear()
+  .domain([-60, 0])
+  .range([10, 50])
+  .clamp(true);
+
+// Popularity to radius
+const popularityScale = d3.scaleSqrt() // Square root for area perception
+  .domain([0, 100])
+  .range([15, 45]);
+```
+
+## Animation with CSS
+
+Prefer CSS transitions over D3 transitions for React:
+
+```tsx
+// ✅ CSS transition (React re-renders smoothly)
+<circle
+  cx={node.x}
+  cy={node.y}
+  r={radius}
+  className="transition-all duration-300 ease-out"
+/>
+
+// ❌ D3 transition (fights with React)
+d3.select(ref.current)
+  .transition()
+  .duration(300)
+  .attr('cx', node.x);
+```
+
+## Force Simulation Tips
+
+```tsx
+// Reheat simulation gently for updates
+simulation.alpha(0.3).restart(); // Not alpha(1)
+
+// Fixed position for current track
+const currentNode = nodes.find(n => n.id === currentTrackId);
+if (currentNode) {
+  currentNode.fx = width / 2;
+  currentNode.fy = height / 2;
+}
+
+// Stop simulation when component unmounts
+useEffect(() => {
+  return () => simulation.stop();
+}, []);
+```
+
+## Common Mistakes
+
+❌ Calling `d3.select()` on React-managed DOM without ref
+❌ Using D3 transitions instead of CSS transitions
+❌ Not cleaning up D3 content in useEffect
+❌ Creating scales inside render (use useMemo)
+❌ Mutating simulation nodes directly (spread to new array)

@@ -1,0 +1,246 @@
+---
+description: Vercel deployment configuration and best practices
+globs: "vercel.json,next.config.js,.env*"
+alwaysApply: false
+---
+
+# Deployment Rules
+
+## Vercel Setup
+
+### Initial Deploy
+
+1. Push code to GitHub
+2. Import project in Vercel dashboard
+3. Framework preset: Next.js (auto-detected)
+4. Set environment variables
+5. Deploy
+
+### Environment Variables
+
+```env
+# Required in Vercel Dashboard → Settings → Environment Variables
+
+SPOTIFY_CLIENT_ID=your_client_id
+SPOTIFY_CLIENT_SECRET=your_client_secret
+NEXTAUTH_SECRET=your_random_secret
+NEXTAUTH_URL=https://your-domain.vercel.app
+```
+
+Generate `NEXTAUTH_SECRET`:
+```bash
+openssl rand -base64 32
+```
+
+### Spotify Dashboard Update
+
+Add production redirect URI:
+```
+https://your-domain.vercel.app/api/auth/callback/spotify
+```
+
+## Next.js Config
+
+```js
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Optimize images from Spotify CDN
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.scdn.co',
+        pathname: '/image/**',
+      },
+    ],
+  },
+  
+  // Headers for security
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
+};
+
+module.exports = nextConfig;
+```
+
+## Build Checks
+
+### Pre-deploy Checklist
+
+- [ ] All TypeScript errors resolved (`npm run build`)
+- [ ] No ESLint errors (`npm run lint`)
+- [ ] Tests pass (`npm test`)
+- [ ] Environment variables documented
+- [ ] Spotify redirect URI added for production
+
+### Build Command
+
+```bash
+# Local build test
+npm run build
+
+# Should complete without errors
+```
+
+## Environment Files
+
+```
+.env.local          # Local development (gitignored)
+.env.example        # Template for others (committed)
+```
+
+```env
+# .env.example
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=http://localhost:3000
+```
+
+## Vercel Configuration (Optional)
+
+```json
+// vercel.json
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
+}
+```
+
+## Domain Setup
+
+### Default
+Your app will be at: `project-name.vercel.app`
+
+### Custom Domain
+1. Vercel Dashboard → Settings → Domains
+2. Add your domain
+3. Configure DNS records as shown
+4. Update `NEXTAUTH_URL` to new domain
+5. Add new redirect URI in Spotify Dashboard
+
+## Preview Deployments
+
+Every PR gets a preview URL automatically.
+
+⚠️ Preview deployments use the same env vars, so Spotify auth will work, but:
+- Preview URLs are temporary
+- They're not in Spotify's allowed redirect URIs
+
+For PR previews to work with auth:
+1. Add a wildcard redirect URI in Spotify (not recommended for production)
+2. Or just test auth on main branch
+
+## Monitoring
+
+### Vercel Analytics (Built-in)
+Enable in Vercel Dashboard → Analytics
+
+### Error Tracking
+Consider adding Sentry for production:
+
+```bash
+npm install @sentry/nextjs
+```
+
+## Performance Optimization
+
+### Already Optimized by Next.js
+- Automatic code splitting
+- Image optimization
+- Font optimization
+- Static generation where possible
+
+### Manual Optimizations
+- Use dynamic imports for heavy D3 visualizations
+- Lazy load non-critical components
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const GalaxyMode = dynamic(
+  () => import('@/components/visualizer/GalaxyMode'),
+  { loading: () => <Skeleton /> }
+);
+```
+
+## Common Deployment Issues
+
+### "Module not found"
+- Check import paths use `@/` alias
+- Ensure file names match exactly (case-sensitive)
+
+### "Environment variable not found"
+- Add to Vercel Dashboard, not just `.env.local`
+- Redeploy after adding variables
+
+### "NEXTAUTH_URL mismatch"
+- Must match actual deployment URL exactly
+- Include `https://`
+- No trailing slash
+
+### "Spotify redirect_uri mismatch"
+- Add exact callback URL to Spotify Dashboard
+- Format: `https://your-domain.vercel.app/api/auth/callback/spotify`
+
+## CI/CD with GitHub Actions (Optional)
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+```
+
+## Post-Deploy Verification
+
+1. Visit production URL
+2. Click "Connect Spotify"
+3. Complete OAuth flow
+4. Verify visualization appears
+5. Test all 4 modes
+6. Check error states (pause music, private session)

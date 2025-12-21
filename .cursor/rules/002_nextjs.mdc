@@ -1,0 +1,137 @@
+---
+description: Next.js 14 App Router patterns and best practices
+globs: "src/app/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js 14 App Router Rules
+
+## Server vs Client Components
+
+### Default to Server Components
+Components are Server Components by default. Only add `'use client'` when you need:
+- useState, useEffect, useRef
+- Event handlers (onClick, onChange)
+- Browser APIs (window, localStorage)
+- Custom hooks that use client features
+
+### Client Component Directive
+```tsx
+'use client';
+// Must be first line, before imports
+```
+
+### Composition Pattern
+Keep client components at the leaves:
+```tsx
+// Server Component (page.tsx)
+export default async function Page() {
+  const data = await fetchData(); // Server-side fetch
+  return <ClientComponent data={data} />;
+}
+```
+
+## File Conventions
+
+### Special Files
+- `page.tsx` - Route page (required)
+- `layout.tsx` - Shared layout
+- `loading.tsx` - Loading UI (Suspense)
+- `error.tsx` - Error boundary (must be client)
+- `not-found.tsx` - 404 page
+
+### Route Groups
+Use `(groupName)` for organization without affecting URL:
+```
+app/
+  (auth)/
+    login/page.tsx    → /login
+  (main)/
+    visualizer/page.tsx → /visualizer
+```
+
+## Data Fetching
+
+### In Server Components
+```tsx
+// Direct fetch in component (no useEffect)
+async function Page() {
+  const data = await fetch('https://api.example.com/data');
+  return <div>{data}</div>;
+}
+```
+
+### Cache Control
+```tsx
+// Revalidate every 60 seconds
+fetch(url, { next: { revalidate: 60 } });
+
+// No cache
+fetch(url, { cache: 'no-store' });
+```
+
+## API Routes
+
+### Route Handlers
+```tsx
+// src/app/api/example/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ data: 'value' });
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  return NextResponse.json({ received: body });
+}
+```
+
+## Metadata
+
+### Static Metadata
+```tsx
+// In page.tsx or layout.tsx
+export const metadata = {
+  title: 'Page Title',
+  description: 'Page description',
+};
+```
+
+### Dynamic Metadata
+```tsx
+export async function generateMetadata({ params }) {
+  return { title: `Track: ${params.id}` };
+}
+```
+
+## Common Mistakes to Avoid
+
+❌ Don't use `getServerSideProps` or `getStaticProps` (Pages Router)
+❌ Don't use `useRouter` from `next/router` (use `next/navigation`)
+❌ Don't put `'use client'` on every component
+❌ Don't fetch data in useEffect when you can do it server-side
+❌ Don't use `<a>` tags - use `<Link>` from `next/link`
+
+## Redirects
+
+```tsx
+import { redirect } from 'next/navigation';
+
+// In Server Component
+if (!session) {
+  redirect('/login');
+}
+```
+
+## Navigation
+
+```tsx
+'use client';
+import { useRouter } from 'next/navigation';
+
+const router = useRouter();
+router.push('/visualizer');
+router.replace('/login');
+router.back();
+```

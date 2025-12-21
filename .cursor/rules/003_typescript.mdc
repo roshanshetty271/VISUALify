@@ -1,0 +1,194 @@
+---
+description: TypeScript strict mode patterns and best practices
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript Rules
+
+## Strict Mode
+Project uses strict mode. All these flags are enabled:
+- `strict: true`
+- `noImplicitAny: true`
+- `strictNullChecks: true`
+- `noUnusedLocals: true`
+- `noUnusedParameters: true`
+
+## Never Use `any`
+
+❌ Bad:
+```tsx
+function process(data: any) { ... }
+const result: any = fetchData();
+```
+
+✅ Good:
+```tsx
+function process(data: unknown) { ... }
+const result: ApiResponse = fetchData();
+
+// If truly unknown, narrow the type
+if (typeof data === 'string') {
+  // data is string here
+}
+```
+
+## Type Definitions
+
+### Prefer Interfaces for Objects
+```tsx
+// ✅ Use interface for object shapes
+interface Track {
+  id: string;
+  name: string;
+  artist: string;
+}
+
+// ✅ Use type for unions, intersections, primitives
+type VisualizationMode = 'galaxy' | 'terrain' | 'neural' | 'river';
+type TrackOrNull = Track | null;
+```
+
+### Export Types from Dedicated Files
+```tsx
+// src/types/spotify.ts
+export interface Track { ... }
+export interface AudioFeatures { ... }
+
+// Usage
+import type { Track, AudioFeatures } from '@/types';
+```
+
+## React Component Types
+
+### Function Components
+```tsx
+// ✅ Typed props directly
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+function Button({ label, onClick, disabled = false }: ButtonProps) {
+  return <button onClick={onClick} disabled={disabled}>{label}</button>;
+}
+
+// ✅ With children
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+function Card({ title, children }: CardProps) {
+  return <div><h2>{title}</h2>{children}</div>;
+}
+```
+
+### Event Handlers
+```tsx
+// Mouse events
+const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => { ... };
+
+// Form events
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { ... };
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => { ... };
+
+// Keyboard events
+const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => { ... };
+```
+
+### Refs
+```tsx
+const svgRef = useRef<SVGSVGElement>(null);
+const inputRef = useRef<HTMLInputElement>(null);
+const divRef = useRef<HTMLDivElement>(null);
+```
+
+## Null Handling
+
+### Optional Chaining
+```tsx
+// ✅ Safe property access
+const artistName = track?.artists?.[0]?.name;
+
+// ✅ With nullish coalescing
+const displayName = track?.name ?? 'Unknown Track';
+```
+
+### Type Guards
+```tsx
+// ✅ Narrow types with guards
+function isTrack(item: unknown): item is Track {
+  return typeof item === 'object' && item !== null && 'id' in item;
+}
+
+if (isTrack(data)) {
+  // data is Track here
+  console.log(data.name);
+}
+```
+
+## Utility Types
+
+```tsx
+// Make all properties optional
+type PartialTrack = Partial<Track>;
+
+// Make all properties required
+type RequiredTrack = Required<Track>;
+
+// Pick specific properties
+type TrackPreview = Pick<Track, 'id' | 'name'>;
+
+// Omit specific properties
+type TrackWithoutId = Omit<Track, 'id'>;
+
+// Record for dictionaries
+type TrackCache = Record<string, Track>;
+```
+
+## Async Functions
+
+```tsx
+// ✅ Always type async return values
+async function fetchTrack(id: string): Promise<Track> {
+  const response = await fetch(`/api/tracks/${id}`);
+  return response.json();
+}
+
+// ✅ Handle potential null
+async function fetchNowPlaying(): Promise<Track | null> {
+  const response = await fetch('/api/now-playing');
+  if (!response.ok) return null;
+  return response.json();
+}
+```
+
+## Generic Types
+
+```tsx
+// ✅ Generic API response wrapper
+interface ApiResponse<T> {
+  data: T;
+  error: string | null;
+  loading: boolean;
+}
+
+// Usage
+const response: ApiResponse<Track[]> = await fetchTracks();
+```
+
+## Constants
+
+```tsx
+// ✅ Use as const for literal types
+const MODES = ['galaxy', 'terrain', 'neural', 'river'] as const;
+type Mode = typeof MODES[number]; // 'galaxy' | 'terrain' | 'neural' | 'river'
+
+// ✅ Const objects
+const CONFIG = {
+  POLL_INTERVAL: 3000,
+  MAX_RETRIES: 3,
+} as const;
+```

@@ -1,0 +1,267 @@
+---
+description: React patterns, hooks, and component best practices
+globs: "src/components/**/*.tsx,src/hooks/**/*.ts"
+alwaysApply: false
+---
+
+# React Rules
+
+## Component Structure
+
+### File Organization
+```tsx
+// 1. Imports (external first, then internal)
+import { useState, useEffect } from 'react';
+import { usePlayerStore } from '@/stores';
+import type { Track } from '@/types';
+
+// 2. Types/Interfaces
+interface TrackNodeProps {
+  track: Track;
+  isActive: boolean;
+}
+
+// 3. Component
+export function TrackNode({ track, isActive }: TrackNodeProps) {
+  // 3a. Hooks (always at top)
+  const [isHovered, setIsHovered] = useState(false);
+  const audioFeatures = usePlayerStore((s) => s.audioFeatures);
+  
+  // 3b. Derived values
+  const color = isActive ? 'green' : 'gray';
+  
+  // 3c. Effects
+  useEffect(() => {
+    // ...
+  }, []);
+  
+  // 3d. Handlers
+  const handleClick = () => { ... };
+  
+  // 3e. Early returns
+  if (!track) return null;
+  
+  // 3f. Render
+  return <div>...</div>;
+}
+```
+
+## Hooks Rules
+
+### useState
+```tsx
+// ✅ Simple state
+const [count, setCount] = useState(0);
+const [track, setTrack] = useState<Track | null>(null);
+
+// ✅ Lazy initialization for expensive values
+const [data, setData] = useState(() => computeExpensiveValue());
+
+// ✅ Functional updates when depending on previous state
+setCount(prev => prev + 1);
+```
+
+### useEffect
+```tsx
+// ✅ Always include cleanup for subscriptions
+useEffect(() => {
+  const subscription = subscribe();
+  return () => subscription.unsubscribe();
+}, []);
+
+// ✅ Don't lie about dependencies
+useEffect(() => {
+  fetchData(id);
+}, [id]); // Include all used values
+
+// ❌ Don't use empty deps if you use external values
+useEffect(() => {
+  fetchData(id); // id is used but not in deps!
+}, []); // BAD
+```
+
+### useRef
+```tsx
+// ✅ For DOM elements
+const svgRef = useRef<SVGSVGElement>(null);
+
+// ✅ For mutable values that don't trigger re-render
+const intervalRef = useRef<NodeJS.Timeout | null>(null);
+const previousValue = useRef(value);
+```
+
+### useMemo
+```tsx
+// ✅ For expensive calculations
+const sortedTracks = useMemo(
+  () => tracks.sort((a, b) => b.energy - a.energy),
+  [tracks]
+);
+
+// ✅ For D3 scales
+const colorScale = useMemo(
+  () => d3.scaleLinear().domain([0, 1]).range(['blue', 'red']),
+  []
+);
+
+// ❌ Don't overuse - simple calculations don't need it
+const fullName = useMemo(() => `${first} ${last}`, [first, last]); // Overkill
+```
+
+### useCallback
+```tsx
+// ✅ For functions passed to child components
+const handleTrackClick = useCallback((id: string) => {
+  selectTrack(id);
+}, [selectTrack]);
+
+// ✅ For functions used in useEffect deps
+const fetchData = useCallback(async () => {
+  const data = await api.fetch();
+  setData(data);
+}, []);
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
+```
+
+## Custom Hooks
+
+### Naming
+Always prefix with `use`:
+```tsx
+// ✅ Good
+function useNowPlaying() { ... }
+function useAudioFeatures(trackId: string) { ... }
+
+// ❌ Bad
+function getNowPlaying() { ... }
+function fetchAudioFeatures() { ... }
+```
+
+### Structure
+```tsx
+// src/hooks/useNowPlaying.ts
+import { useState, useEffect, useCallback } from 'react';
+
+export function useNowPlaying() {
+  const [track, setTrack] = useState<Track | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchNowPlaying();
+      setTrack(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { track, loading, error, refetch };
+}
+```
+
+## Event Handling
+
+```tsx
+// ✅ Inline for simple handlers
+<button onClick={() => setOpen(true)}>Open</button>
+
+// ✅ Named function for complex handlers
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  // ... complex logic
+};
+<form onSubmit={handleSubmit}>
+
+// ✅ Pass data with arrow function
+{tracks.map(track => (
+  <TrackNode
+    key={track.id}
+    onClick={() => handleTrackClick(track.id)}
+  />
+))}
+```
+
+## Conditional Rendering
+
+```tsx
+// ✅ Short circuit for simple conditions
+{isLoading && <Spinner />}
+{error && <ErrorMessage error={error} />}
+{track && <TrackDisplay track={track} />}
+
+// ✅ Ternary for either/or
+{isPlaying ? <PauseIcon /> : <PlayIcon />}
+
+// ✅ Early return for complex conditions
+if (loading) return <Skeleton />;
+if (error) return <Error error={error} />;
+if (!data) return <Empty />;
+return <Content data={data} />;
+```
+
+## Lists and Keys
+
+```tsx
+// ✅ Use unique, stable IDs
+{tracks.map(track => (
+  <TrackNode key={track.id} track={track} />
+))}
+
+// ❌ Don't use array index as key (unless list is static)
+{tracks.map((track, index) => (
+  <TrackNode key={index} track={track} /> // BAD if list can change
+))}
+```
+
+## Props Patterns
+
+### Destructure in Parameters
+```tsx
+// ✅ Destructure props
+function Button({ label, onClick, disabled = false }: ButtonProps) {
+  return <button onClick={onClick} disabled={disabled}>{label}</button>;
+}
+
+// ❌ Don't use props.x everywhere
+function Button(props: ButtonProps) {
+  return <button onClick={props.onClick}>{props.label}</button>;
+}
+```
+
+### Spread Props Sparingly
+```tsx
+// ✅ OK for HTML attributes
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+}
+
+function Input({ label, ...rest }: InputProps) {
+  return (
+    <label>
+      {label}
+      <input {...rest} />
+    </label>
+  );
+}
+```
+
+## Avoid These Patterns
+
+❌ Direct DOM manipulation (use refs instead)
+❌ Mutating state directly
+❌ Calling hooks conditionally
+❌ Calling hooks in loops
+❌ Creating functions inside JSX when avoidable
+❌ Using `index` as key for dynamic lists

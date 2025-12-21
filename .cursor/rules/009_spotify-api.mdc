@@ -1,0 +1,302 @@
+---
+description: Spotify Web API patterns, rate limiting, and error handling
+globs: "src/lib/spotify/**/*.ts,src/hooks/useNowPlaying.ts,src/hooks/useAudioFeatures.ts"
+alwaysApply: false
+---
+
+# Spotify API Rules
+
+## API Client
+
+```tsx
+// src/lib/spotify/client.ts
+const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
+
+class SpotifyClient {
+  private audioFeaturesCache = new Map<string, AudioFeatures>();
+  
+  private async fetch<T>(
+    endpoint: string,
+    accessToken: string
+  ): Promise<T | null> {
+    const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    // Handle rate limiting
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      throw new SpotifyAPIError(
+        429,
+        'Rate limited',
+        retryAfter ? parseInt(retryAfter) : 30
+      );
+    }
+
+    // Handle auth errors
+    if (response.status === 401) {
+      throw new SpotifyAPIError(401, 'Unauthorized - token may be expired');
+    }
+
+    // Handle no content (nothing playing)
+    if (response.status === 204) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new SpotifyAPIError(response.status, 'API request failed');
+    }
+
+    return response.json();
+  }
+
+  async getNowPlaying(accessToken: string): Promise<CurrentlyPlayingResponse | null> {
+    return this.fetch<CurrentlyPlayingResponse>(
+      '/me/player/currently-playing',
+      accessToken
+    );
+  }
+
+  async getAudioFeatures(
+    trackId: string,
+    accessToken: string
+  ): Promise<AudioFeatures | null> {
+    // Check cache first
+    const cached = this.audioFeaturesCache.get(trackId);
+    if (cached) return cached;
+
+    const features = await this.fetch<AudioFeatures>(
+      `/audio-features/${trackId}`,
+      accessToken
+    );
+
+    // Cache the result (features never change for a track)
+    if (features) {
+      this.audioFeaturesCache.set(trackId, features);
+    }
+
+    return features;
+  }
+
+  async getRecentlyPlayed(
+    accessToken: string,
+    limit = 20
+  ): Promise<RecentlyPlayedResponse | null> {
+    return this.fetch<RecentlyPlayedResponse>(
+      `/me/player/recently-played?limit=${limit}`,
+      accessToken
+    );
+  }
+}
+
+export const spotifyClient = new SpotifyClient();
+```
+
+## Custom Error Class
+
+```tsx
+// src/lib/spotify/errors.ts
+export class SpotifyAPIError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public retryAfter?: number
+  ) {
+    super(message);
+    this.name = 'SpotifyAPIError';
+  }
+}
+```
+
+## Rate Limiting Strategy
+
+### Polling Intervals
+```tsx
+const POLL_INTERVALS = {
+  PLAYING: 3000,      // 3 seconds when music playing
+  IDLE: 10000,        // 10 seconds when nothing playing
+  RATE_LIMITED: 30000, // 30 seconds after 429
+};
+```
+
+### Exponential Backoff
+```tsx
+// src/lib/utils/retry.ts
+export function getBackoffDelay(attempt: number, baseDelay = 1000): number {
+  return Math.min(baseDelay * Math.pow(2, attempt), 30000);
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (error instanceof SpotifyAPIError) {
+        if (error.status === 429 && error.retryAfter) {
+          await sleep(error.retryAfter * 1000);
+          continue;
+        }
+        // Don't retry auth errors
+        if (error.status === 401) throw error;
+      }
+      
+      await sleep(getBackoffDelay(attempt));
+    }
+  }
+  
+  throw lastError;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+```
+
+## Polling Hook with Rate Limit Handling
+
+```tsx
+// src/hooks/useNowPlaying.ts
+'use client';
+
+import { useEffect, useCallback, useRef } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePlayerStore } from '@/stores';
+import { spotifyClient, SpotifyAPIError } from '@/lib/spotify';
+
+export function useNowPlaying() {
+  const { data: session } = useSession();
+  const { 
+    setCurrentTrack, 
+    setIsPlaying, 
+    setError,
+    setIsLoading,
+    isPlaying 
+  } = usePlayerStore();
+  
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isRateLimited = useRef(false);
+
+  const fetchNowPlaying = useCallback(async () => {
+    if (!session?.accessToken || isRateLimited.current) return;
+
+    try {
+      setIsLoading(true);
+      const data = await spotifyClient.getNowPlaying(session.accessToken);
+      
+      if (data?.item) {
+        setCurrentTrack(data.item);
+        setIsPlaying(data.is_playing);
+      } else {
+        setCurrentTrack(null);
+        setIsPlaying(false);
+      }
+      setError(null);
+    } catch (err) {
+      if (err instanceof SpotifyAPIError) {
+        if (err.status === 429) {
+          isRateLimited.current = true;
+          const delay = (err.retryAfter ?? 30) * 1000;
+          
+          retryTimeoutRef.current = setTimeout(() => {
+            isRateLimited.current = false;
+          }, delay);
+          
+          setError('syncing'); // Show "Syncing..." not error
+        } else {
+          setError(err.message);
+        }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session?.accessToken, setCurrentTrack, setIsPlaying, setError, setIsLoading]);
+
+  // Visibility-aware polling
+  useEffect(() => {
+    if (!session?.accessToken) return;
+
+    let intervalId: NodeJS.Timeout;
+    
+    const startPolling = () => {
+      fetchNowPlaying();
+      const interval = isPlaying ? 3000 : 10000;
+      intervalId = setInterval(fetchNowPlaying, interval);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(intervalId);
+      } else {
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session?.accessToken, fetchNowPlaying, isPlaying]);
+}
+```
+
+## Audio Features Caching
+
+```tsx
+// Features NEVER change for a track - cache aggressively
+// Cache is in-memory in spotifyClient
+
+// Usage in hook
+async function fetchAudioFeatures(trackId: string, accessToken: string) {
+  // spotifyClient handles caching internally
+  const features = await spotifyClient.getAudioFeatures(trackId, accessToken);
+  if (features) {
+    setAudioFeatures(features);
+  }
+}
+```
+
+## API Endpoints Used
+
+| Endpoint | Purpose | Rate Limit Notes |
+|----------|---------|------------------|
+| `/me/player/currently-playing` | Get current track | Poll every 3-10s |
+| `/audio-features/{id}` | Get track features | Cache forever |
+| `/me/player/recently-played` | Get history | Fetch once on load |
+
+## Error States
+
+```tsx
+// Map API states to UI states
+type PlayerStatus = 
+  | 'loading'      // Initial load
+  | 'playing'      // Track playing
+  | 'paused'       // Track paused
+  | 'idle'         // Nothing playing
+  | 'private'      // Private session
+  | 'syncing'      // Rate limited, using last state
+  | 'error';       // Real error
+```
+
+## Common Mistakes
+
+❌ Polling too frequently (< 2 seconds)
+❌ Not caching audio features
+❌ Ignoring Retry-After header
+❌ Polling when tab is hidden
+❌ Not handling 204 (no content) response
+❌ Treating rate limit as error (show "Syncing..." instead)

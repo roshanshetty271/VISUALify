@@ -1,0 +1,405 @@
+# VISUALify - App Flow Document
+
+## Overview
+
+This document describes the user journey through VISUALify, from landing to visualization.
+
+---
+
+## User Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        LANDING PAGE                              │
+│                                                                 │
+│                        VISUALify                                │
+│                     "See your sound"                            │
+│                                                                 │
+│                  [ Connect Spotify ]                            │
+│                                                                 │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     SPOTIFY AUTH                                │
+│                                                                 │
+│            Spotify OAuth consent screen                         │
+│            (external - accounts.spotify.com)                    │
+│                                                                 │
+│            [Agree] or [Cancel]                                  │
+│                                                                 │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+           ┌───────────────┴───────────────┐
+           │                               │
+           ▼                               ▼
+    [User Agrees]                   [User Cancels]
+           │                               │
+           ▼                               ▼
+┌─────────────────────┐         ┌─────────────────────┐
+│   CALLBACK HANDLER  │         │   LANDING PAGE      │
+│                     │         │   (with error msg)  │
+│   - Exchange code   │         │                     │
+│   - Store tokens    │         │   "Auth cancelled"  │
+│   - Create session  │         │                     │
+└──────────┬──────────┘         └─────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      VISUALIZER PAGE                            │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    MODE SELECTOR                         │   │
+│  │     [Galaxy] [Terrain] [Neural] [River]                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                                                         │   │
+│  │                   VISUALIZATION AREA                    │   │
+│  │                                                         │   │
+│  │              (D3.js rendered content)                   │   │
+│  │                                                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  NOW PLAYING                                            │   │
+│  │  🎵 Track Name - Artist                                 │   │
+│  │  ███████░░░ 2:34 / 4:12                                │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Flow States
+
+### 1. Landing Page
+
+**URL:** `/`
+
+**State:** Unauthenticated
+
+**Components:**
+- Hero section with logo and tagline
+- "Connect Spotify" button
+- Feature highlights
+- Footer with privacy note
+
+**Actions:**
+- Click "Connect Spotify" → Redirects to Spotify OAuth
+
+```tsx
+// src/app/page.tsx
+export default function LandingPage() {
+  return (
+    <main>
+      <Hero />
+      <Features />
+      <LoginButton />
+      <Footer />
+    </main>
+  );
+}
+```
+
+---
+
+### 2. Spotify OAuth
+
+**URL:** `https://accounts.spotify.com/authorize`
+
+**External page** - Spotify handles this entirely
+
+**Parameters sent:**
+```
+client_id: SPOTIFY_CLIENT_ID
+response_type: code
+redirect_uri: http://localhost:3000/api/auth/callback/spotify
+scope: user-read-playback-state user-read-currently-playing user-read-recently-played
+```
+
+**Outcomes:**
+- User approves → Redirect to callback with `code`
+- User denies → Redirect to callback with `error`
+
+---
+
+### 3. Auth Callback
+
+**URL:** `/api/auth/callback/spotify`
+
+**Handler:** NextAuth.js
+
+**Process:**
+1. Exchange `code` for access/refresh tokens
+2. Fetch user profile
+3. Create session with tokens
+4. Set httpOnly cookie
+5. Redirect to `/visualizer`
+
+**Error handling:**
+- Invalid code → Redirect to `/` with error
+- Token exchange fails → Redirect to `/` with error
+
+---
+
+### 4. Visualizer Page
+
+**URL:** `/visualizer`
+
+**State:** Authenticated
+
+**Initial Load Sequence:**
+```
+1. Check session (server-side)
+   └─ No session → Redirect to /login
+   
+2. Render page shell (SSR)
+   └─ Show loading skeleton
+   
+3. Client hydration
+   └─ Initialize Zustand stores
+   
+4. Start polling (client)
+   ├─ Fetch now playing
+   ├─ Fetch audio features
+   └─ Fetch recent tracks
+   
+5. Render visualization
+   └─ D3 force simulation starts
+```
+
+---
+
+## State Transitions
+
+### Player States
+
+```
+┌─────────────┐
+│   LOADING   │ ◄─── Initial state
+└──────┬──────┘
+       │
+       ▼
+┌──────┴──────┐     ┌─────────────┐
+│   PLAYING   │ ◄──►│   PAUSED    │
+└──────┬──────┘     └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│   NOTHING   │ ◄─── No track playing
+│   PLAYING   │
+└─────────────┘
+       │
+       ▼
+┌─────────────┐
+│   ERROR     │ ◄─── API error / rate limited
+└─────────────┘
+```
+
+### Visualization Mode States
+
+```
+          ┌──────────────────────────────────────┐
+          │                                      │
+          ▼                                      │
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│   GALAXY    │◄►│   TERRAIN   │◄►│   NEURAL    │◄►│   RIVER     │
+│   (default) │  │             │  │             │  │             │
+└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
+```
+
+---
+
+## Polling Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        POLLING LOOP                              │
+└─────────────────────────────────────────────────────────────────┘
+
+Every 3 seconds (when playing) or 10 seconds (when idle):
+
+┌─────────────┐
+│ Check Tab   │
+│ Visibility  │
+└──────┬──────┘
+       │
+       ├─── Tab Hidden ──► Skip this cycle
+       │
+       ▼
+┌─────────────┐
+│ Fetch Now   │
+│ Playing     │
+└──────┬──────┘
+       │
+       ├─── 429 Error ──► Back off (use Retry-After)
+       │
+       ├─── No Track ──► Update state, continue
+       │
+       ▼
+┌─────────────┐
+│ Check Cache │
+│ for Audio   │
+│ Features    │
+└──────┬──────┘
+       │
+       ├─── Cache Hit ──► Use cached features
+       │
+       ▼
+┌─────────────┐
+│ Fetch Audio │
+│ Features    │
+└──────┬──────┘
+       │
+       ├─── 429 Error ──► Use default features
+       │
+       ▼
+┌─────────────┐
+│ Update      │
+│ Store       │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ Re-render   │
+│ Visualization│
+└─────────────┘
+```
+
+---
+
+## Edge Case Flows
+
+### Nothing Playing
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                     🎵 Nothing Playing                          │
+│                                                                 │
+│              Start playing music on Spotify                     │
+│              to see your visualization                          │
+│                                                                 │
+│                    [ Open Spotify ]                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Private Session
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                     🔒 Private Session                          │
+│                                                                 │
+│              Your Spotify session is private.                   │
+│              Disable private session to see                     │
+│              your visualization.                                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Rate Limited
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                    ⏳ Syncing...                                │
+│                                                                 │
+│              (Visualization continues with                      │
+│               last known state)                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Session Expired
+
+```
+Flow:
+1. API returns 401
+2. NextAuth attempts silent refresh
+3a. Refresh succeeds → Continue normally
+3b. Refresh fails → Redirect to /login
+
+User sees nothing if refresh succeeds.
+```
+
+---
+
+## Data Flow
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         SPOTIFY API                              │
+│  /v1/me/player/currently-playing                                │
+│  /v1/audio-features/{id}                                        │
+│  /v1/me/player/recently-played                                  │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────┐
+│                     SPOTIFY CLIENT                              │
+│  src/lib/spotify/client.ts                                     │
+│  - Handles auth headers                                        │
+│  - Handles rate limiting                                       │
+│  - Caches audio features                                       │
+└────────────────────────────┬───────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────┐
+│                     ZUSTAND STORES                              │
+│  usePlayerStore                                                 │
+│  - currentTrack                                                │
+│  - audioFeatures                                               │
+│  - recentTracks                                                │
+└────────────────────────────┬───────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────┐
+│                     VISUALIZER COMPONENTS                       │
+│  GalaxyMode / TerrainMode / NeuralMode / RiverMode            │
+│  - Subscribe to store                                          │
+│  - Transform data to visual properties                         │
+│  - Render SVG/Canvas                                           │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## URL Structure
+
+| Path | Auth Required | Description |
+|------|--------------|-------------|
+| `/` | No | Landing page |
+| `/login` | No | Login page (redirects if authenticated) |
+| `/visualizer` | Yes | Main visualization |
+| `/api/auth/[...nextauth]` | N/A | Auth API routes |
+
+---
+
+## Session Lifecycle
+
+```
+Login:
+  1. User clicks "Connect Spotify"
+  2. Redirect to Spotify OAuth
+  3. User approves
+  4. Callback exchanges code for tokens
+  5. Session created (stored in httpOnly cookie)
+  6. Redirect to /visualizer
+
+Token Refresh:
+  1. Access token expires (1 hour)
+  2. Next API call triggers refresh
+  3. Refresh token used to get new access token
+  4. Session updated silently
+  5. User continues uninterrupted
+
+Logout:
+  1. User clicks "Logout"
+  2. Session destroyed
+  3. Cookie cleared
+  4. Redirect to /
+```

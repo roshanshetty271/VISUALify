@@ -1,0 +1,49 @@
+---
+description: VISUALify project overview and constraints
+globs: "**/*"
+alwaysApply: true
+---
+
+# VISUALify Project
+
+Real-time Spotify music visualization web app.
+
+## Tech Stack
+- Next.js 14 (App Router)
+- TypeScript (strict mode)
+- D3.js (visualization)
+- Tailwind CSS (styling)
+- Zustand (state)
+- NextAuth.js (auth)
+- Vercel (hosting)
+
+## Key Constraints
+- NO Pages Router - use App Router only
+- NO `any` types - use proper TypeScript
+- NO Redux - use Zustand
+- NO separate CSS files for components - use Tailwind
+- NO class components - use functional components only
+
+## File Locations
+- Pages: `src/app/`
+- Components: `src/components/`
+- Hooks: `src/hooks/`
+- Utils: `src/lib/`
+- Stores: `src/stores/`
+- Types: `src/types/`
+
+## Naming Conventions
+- Components: PascalCase (`GalaxyMode.tsx`)
+- Hooks: camelCase with `use` prefix (`useNowPlaying.ts`)
+- Stores: camelCase with `use` prefix (`usePlayerStore.ts`)
+- Utils: camelCase (`colors.ts`)
+
+## Import Aliases
+Use `@/` prefix for all imports:
+```tsx
+import { GalaxyMode } from '@/components/visualizer';
+import { usePlayerStore } from '@/stores';
+```
+
+## Documentation
+Read project docs in `/docs` folder before implementing features.
