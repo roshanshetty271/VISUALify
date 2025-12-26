@@ -3,25 +3,168 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* BPM sync */
+  --pulse-duration: 1s;
+  --bpm: 60;
+  
+  /* Theme colors (default: Spotify) */
+  --theme-primary: #1DB954;
+  --theme-secondary: #1ed760;
+  --theme-accent: #22c55e;
+  --theme-bg-start: #0a0a0f;
+  --theme-bg-end: #1a1a2e;
+  
+  /* Deprecated - use theme vars */
+  --glow-color: var(--theme-primary);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* BPM-synced pulse animation */
+@keyframes pulse-bpm {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-pulse-bpm {
+  animation: pulse-bpm var(--pulse-duration) ease-in-out infinite;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Logo glow animation */
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 
+      0 0 20px var(--theme-primary),
+      0 0 40px color-mix(in srgb, var(--theme-primary) 40%, transparent),
+      0 0 60px color-mix(in srgb, var(--theme-primary) 20%, transparent);
   }
+  50% {
+    text-shadow: 
+      0 0 30px var(--theme-primary),
+      0 0 60px color-mix(in srgb, var(--theme-primary) 60%, transparent),
+      0 0 90px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  }
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Floating particles */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-30px) translateX(-15px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes float-slower {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-40px) translateX(20px);
+    opacity: 0.4;
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 8s ease-in-out infinite;
+}
+
+/* Wave animation for audio bars */
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+}
+
+.animate-wave {
+  /* Use pulse-duration which is calculated correctly in JavaScript based on BPM */
+  animation: wave calc(var(--pulse-duration, 1s) / 2) ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* Slide-in animation */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: forwards;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-primary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-secondary);
 }
