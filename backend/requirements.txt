@@ -1,0 +1,32 @@
+# VISUALify Backend - Python Dependencies
+# Python 3.11+
+
+# Web Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+
+# Data Validation
+pydantic==2.6.1
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+alembic==1.13.1
+
+# Redis
+redis[hiredis]==5.0.1
+
+# Security
+python-jose[cryptography]==3.3.0
+cryptography==42.0.2
+
+# HTTP Client
+httpx==0.26.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Logging
+structlog==24.1.0

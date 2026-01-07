@@ -1,26 +1,84 @@
+// src/hooks/useNowPlaying.ts
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePlayerStore } from '@/stores';
+import { useWebSocket } from './useWebSocket';
 import { spotifyClient, SpotifyAPIError } from '@/lib/spotify';
 import { normalizeTrack } from '@/types';
 
-const POLL_INTERVAL_PLAYING = 2000;  // 2 seconds when playing (faster sync)
-const POLL_INTERVAL_IDLE = 5000;     // 5 seconds when idle
-const PROGRESS_UPDATE_INTERVAL = 50;  // 50ms for smoother progress
+const POLL_INTERVAL_PLAYING = 3000;  // 3 seconds when playing (fallback only)
+const POLL_INTERVAL_IDLE = 10000;    // 10 seconds when idle (fallback only)
+const PROGRESS_UPDATE_INTERVAL = 50; // 50ms for smooth progress bar
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+/**
+ * Hook for real-time now playing updates.
+ * 
+ * Strategy:
+ * 1. Try to get backend JWT token on mount
+ * 2. If backend available, use WebSocket for real-time updates
+ * 3. If WebSocket disconnected/unavailable, fall back to direct Spotify polling
+ * 
+ * This ensures the app works even without the backend deployed.
+ */
 export function useNowPlaying() {
   const { data: session } = useSession();
   const store = usePlayerStore();
+  
+  // Backend token state
+  const [backendToken, setBackendToken] = useState<string | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
+  
+  // WebSocket connection
+  const { isConnected: wsConnected, error: wsError } = useWebSocket({
+    token: backendToken,
+    enabled: !!backendToken,
+  });
+
+  // Polling refs (for fallback)
   const isRateLimited = useRef(false);
   const rateLimitTimeout = useRef<NodeJS.Timeout | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // === BACKEND TOKEN EXCHANGE ===
+  useEffect(() => {
+    async function exchangeToken() {
+      if (!session?.accessToken) {
+        setBackendToken(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nextauth_token: session.accessToken }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Token exchange failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setBackendToken(data.access_token);
+        setBackendError(null);
+        console.log('[useNowPlaying] Backend token acquired');
+      } catch (e) {
+        console.warn('[useNowPlaying] Backend unavailable, using fallback polling:', e);
+        setBackendError(e instanceof Error ? e.message : 'Backend unavailable');
+        setBackendToken(null);
+      }
+    }
+
+    exchangeToken();
+  }, [session?.accessToken]);
+
+  // === FALLBACK POLLING (when WebSocket not available) ===
   const fetchNowPlaying = useCallback(async (isManualSync = false) => {
     if (!session?.accessToken) return;
-    
-    // For manual sync, ignore rate limit
     if (!isManualSync && isRateLimited.current) return;
 
     if (isManualSync) {
@@ -34,12 +92,10 @@ export function useNowPlaying() {
         const track = normalizeTrack(data.item);
         store.setCurrentTrack(track);
         store.setIsPlaying(data.is_playing);
-        
-        // Store progress and duration
         store.setProgress(data.progress_ms);
         store.setDuration(data.item.duration_ms);
 
-        // Fetch audio features for the track
+        // Fetch audio features
         const features = await spotifyClient.getAudioFeatures(track.id, session.accessToken);
         if (features) {
           store.setAudioFeatures(features);
@@ -58,19 +114,13 @@ export function useNowPlaying() {
     } catch (err) {
       if (err instanceof SpotifyAPIError) {
         if (err.status === 429) {
-          // Rate limited - back off (but keep it short for better UX)
           isRateLimited.current = true;
-          const delay = Math.min((err.retryAfter ?? 5) * 1000, 5000); // Max 5 seconds
-
+          const delay = Math.min((err.retryAfter ?? 5) * 1000, 5000);
           rateLimitTimeout.current = setTimeout(() => {
             isRateLimited.current = false;
           }, delay);
-
-          if (!isManualSync) {
-            store.setError('syncing');
-          }
+          if (!isManualSync) store.setError('syncing');
         } else if (err.status === 401) {
-          // Token issue - session guard will handle re-login
           store.setError('unauthorized');
         } else {
           store.setError(err.message);
@@ -86,12 +136,19 @@ export function useNowPlaying() {
     }
   }, [session?.accessToken, store]);
 
-  // Manual sync function - exposed for UI button
+  // Manual sync function
   const forceSync = useCallback(() => {
-    fetchNowPlaying(true);
-  }, [fetchNowPlaying]);
+    if (wsConnected) {
+      // If WebSocket connected, just update last sync time
+      // The server will push the latest state
+      store.setLastSyncTime(Date.now());
+    } else {
+      // Fallback to direct polling
+      fetchNowPlaying(true);
+    }
+  }, [wsConnected, fetchNowPlaying, store]);
 
-  // Local progress interpolation for smooth progress bar
+  // === LOCAL PROGRESS INTERPOLATION ===
   useEffect(() => {
     if (store.isPlaying) {
       progressInterval.current = setInterval(() => {
@@ -110,9 +167,13 @@ export function useNowPlaying() {
     };
   }, [store.isPlaying, store]);
 
-  // Visibility-aware polling
+  // === FALLBACK POLLING (only when WebSocket not connected) ===
   useEffect(() => {
+    // Don't poll if WebSocket is connected or trying to connect
+    if (wsConnected || backendToken) return;
     if (!session?.accessToken) return;
+
+    console.log('[useNowPlaying] Using fallback polling');
 
     let intervalId: NodeJS.Timeout;
 
@@ -140,7 +201,13 @@ export function useNowPlaying() {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [session?.accessToken, fetchNowPlaying, store.isPlaying]);
+  }, [session?.accessToken, wsConnected, backendToken, fetchNowPlaying, store.isPlaying]);
 
-  return { forceSync };
+  return {
+    forceSync,
+    isWebSocketConnected: wsConnected,
+    isUsingFallback: !wsConnected && !backendToken,
+    backendError,
+    wsError,
+  };
 }

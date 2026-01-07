@@ -1,4 +1,5 @@
 export { useNowPlaying } from './useNowPlaying';
+export { useWebSocket } from './useWebSocket';
 export { useRecentTracks } from './useRecentTracks';
 export { useBPM } from './useBPM';
 export { useFullscreen } from './useFullscreen';
