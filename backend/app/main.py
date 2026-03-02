@@ -21,7 +21,7 @@ from app.core.rate_limit import limiter
 from app.core.exceptions import AppException, app_exception_handler
 from app.websocket.manager import manager
 from app.websocket.handlers import websocket_now_playing
-from app.api import auth, health
+from app.api import auth, health, stats
 
 # Configure logging
 logging.basicConfig(
@@ -76,12 +76,25 @@ async def lifespan(app: FastAPI):
         ),
     )
 
-    # Redis connection
-    app.state.redis = aioredis.from_url(
-        settings.redis_url,
-        encoding="utf-8",
-        decode_responses=True,
-    )
+    # Redis connection (graceful fallback if unavailable)
+    redis_client = None
+    if settings.redis_url:
+        try:
+            redis_client = aioredis.from_url(
+                settings.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+            )
+            await redis_client.ping()
+            logger.info("Redis connected")
+        except Exception as e:
+            logger.warning(f"Redis connection failed: {e}")
+            redis_client = None
+    app.state.redis = redis_client
+
+    # Initialize cache layer
+    from app.core.cache import init_cache
+    init_cache(redis_client)
 
     # Shutdown event for graceful termination
     app.state.shutdown_event = asyncio.Event()
@@ -114,7 +127,8 @@ async def lifespan(app: FastAPI):
 
     # Close external connections
     await app.state.http_client.aclose()
-    await app.state.redis.close()
+    if app.state.redis:
+        await app.state.redis.close()
 
     logger.info("Shutdown complete")
 
@@ -163,6 +177,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Include routers
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(stats.router)
 
 # WebSocket endpoint
 app.add_api_websocket_route("/ws/now-playing", websocket_now_playing)

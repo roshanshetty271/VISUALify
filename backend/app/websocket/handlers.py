@@ -99,32 +99,41 @@ async def websocket_now_playing(
     await websocket.accept()
     logger.info(f"WebSocket accepted for user {user_id}")
 
-    # Register with connection manager
-    conn = await manager.connect(
-        websocket=websocket,
-        user_id=user_id,
-        spotify_token=spotify_token,
-    )
-
-    # Send confirmation
-    await conn.send_message({
-        "type": "connected",
-        "user_id": str(user_id),
-    })
-
-    # Start polling task
-    polling = PollingService(conn, websocket.app.state)
-    conn.polling_task = asyncio.create_task(polling.run())
-
+    conn = None
     try:
+        # Register with connection manager
+        conn = await manager.connect(
+            websocket=websocket,
+            user_id=user_id,
+            spotify_token=spotify_token,
+        )
+
+        # Send confirmation - may fail if client disconnects immediately
+        try:
+            await conn.send_message({
+                "type": "connected",
+                "user_id": str(user_id),
+            })
+        except Exception as e:
+            logger.warning(f"Failed to send connected message to {user_id}: {e}")
+            return
+
+        # Start polling task
+        polling = PollingService(conn, websocket.app.state)
+        conn.polling_task = asyncio.create_task(polling.run())
+
         # Keep-alive loop - handle client messages
         while True:
             try:
                 message = await websocket.receive_json()
                 
                 if message.get("type") == "ping":
-                    await conn.send_message({"type": "pong"})
-                    
+                    try:
+                        await conn.send_message({"type": "pong"})
+                    except Exception:
+                        # Connection closed, exit loop
+                        break
+                        
             except asyncio.TimeoutError:
                 # No message received, continue
                 pass
@@ -133,8 +142,11 @@ async def websocket_now_playing(
         logger.info(f"WebSocket disconnected for user {user_id}")
 
     except Exception as e:
-        logger.error(f"WebSocket error for user {user_id}: {e}")
+        # Only log if it's not a common disconnect error
+        if "ConnectionClosedError" not in str(type(e).__name__):
+            logger.error(f"WebSocket error for user {user_id}: {e}")
 
     finally:
-        # Clean up
-        await manager.disconnect(user_id)
+        # Clean up - only if we successfully connected
+        if conn is not None:
+            await manager.disconnect(user_id)

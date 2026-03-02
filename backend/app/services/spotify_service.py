@@ -144,6 +144,62 @@ class SpotifyService:
                 return None
             raise
 
+    async def get_audio_features_batch(
+        self,
+        track_ids: list[str],
+        access_token: str,
+    ) -> dict[str, dict]:
+        """
+        Get audio features for multiple tracks in one request.
+        Spotify allows up to 100 IDs per batch.
+
+        Returns:
+            Dict mapping spotify track ID to features dict
+        """
+        results = {}
+        for i in range(0, len(track_ids), 100):
+            batch = track_ids[i:i + 100]
+            try:
+                data = await self._request(
+                    "GET",
+                    "/audio-features",
+                    access_token,
+                    params={"ids": ",".join(batch)},
+                )
+                if data and "audio_features" in data:
+                    for feature in data["audio_features"]:
+                        if feature and feature.get("id"):
+                            results[feature["id"]] = feature
+            except SpotifyAPIError as e:
+                if e.status_code == 404:
+                    continue
+                logger.warning(f"Batch audio features request failed: {e}")
+        return results
+
+    # === RECENTLY PLAYED ===
+
+    async def get_recently_played(
+        self,
+        access_token: str,
+        limit: int = 50,
+    ) -> dict:
+        """
+        Get recently played tracks.
+        
+        Args:
+            access_token: Spotify access token
+            limit: Number of tracks (max 50)
+            
+        Returns:
+            Raw Spotify response with items array
+        """
+        return await self._request(
+            "GET",
+            "/me/player/recently-played",
+            access_token,
+            params={"limit": min(limit, 50)},
+        )
+
     # === USER PROFILE ===
 
     async def get_user_profile(

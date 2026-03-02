@@ -61,7 +61,7 @@ class PollingService:
         """
         logger.info(f"Starting polling for user {self.conn.user_id}")
 
-        while not self.app_state.shutdown_event.is_set():
+        while not self.app_state.shutdown_event.is_set() and not self.conn.is_closed:
             try:
                 await self._poll_once()
                 
@@ -78,17 +78,22 @@ class PollingService:
 
             except TokenExpiredError:
                 # Refresh token and retry
-                await self._handle_token_refresh()
+                if not self.conn.is_closed:
+                    await self._handle_token_refresh()
 
             except RateLimitedError as e:
                 # Back off and notify frontend
-                await self._handle_rate_limit(e.retry_after)
+                if not self.conn.is_closed:
+                    await self._handle_rate_limit(e.retry_after)
 
             except asyncio.CancelledError:
                 logger.info(f"Polling cancelled for user {self.conn.user_id}")
                 break
 
             except Exception as e:
+                # Check if it's a connection-related error
+                if self.conn.is_closed:
+                    break
                 logger.error(f"Polling error for {self.conn.user_id}: {e}")
                 # Exponential backoff on errors
                 self._backoff_seconds = min(self._backoff_seconds * 2 or 5, 60)

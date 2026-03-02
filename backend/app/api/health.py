@@ -50,6 +50,10 @@ async def readiness_check(
         checks["database"] = f"error: {str(e)[:50]}"
         overall_status = "not_ready"
 
+    # Check Redis cache
+    from app.core.cache import cache_health
+    checks["redis"] = await cache_health()
+
     # WebSocket stats (informational)
     checks["websocket_connections"] = manager.connection_count
 

@@ -27,13 +27,17 @@ class UserConnection:
     last_track_id: str | None = None
     is_playing: bool = False
     polling_task: asyncio.Task | None = None
+    is_closed: bool = False
 
     async def send_message(self, message: dict[str, Any]):
         """Send a JSON message to the WebSocket."""
+        if self.is_closed:
+            return  # Silently ignore sends to closed connections
         try:
             await self.websocket.send_json(message)
         except Exception as e:
-            logger.error(f"Failed to send to {self.user_id}: {e}")
+            self.is_closed = True
+            logger.debug(f"Connection closed for {self.user_id}: {type(e).__name__}")
             raise
 
 
@@ -114,14 +118,17 @@ class ConnectionManager:
             return
 
         conn = self._connections[user_id]
+        conn.is_closed = True  # Mark as closed to prevent further sends
 
         # Cancel polling task
         if conn.polling_task and not conn.polling_task.done():
             conn.polling_task.cancel()
             try:
-                await conn.polling_task
-            except asyncio.CancelledError:
+                await asyncio.wait_for(conn.polling_task, timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
+            except Exception as e:
+                logger.debug(f"Error waiting for polling task: {e}")
 
         # Remove from connections
         del self._connections[user_id]
@@ -173,18 +180,28 @@ class ConnectionManager:
         """
         stale = []
 
+        # Get a snapshot of connections to check
         async with self._lock:
-            for user_id, conn in self._connections.items():
-                try:
-                    # Send ping to check if connection is alive
-                    await asyncio.wait_for(
-                        conn.websocket.send_json({"type": "ping"}),
-                        timeout=5.0,
-                    )
-                except Exception:
-                    stale.append(user_id)
+            connections_to_check = [
+                (user_id, conn) for user_id, conn in self._connections.items()
+                if not conn.is_closed
+            ]
 
-        # Disconnect stale connections (outside lock to avoid deadlock)
+        # Check each connection outside the lock
+        for user_id, conn in connections_to_check:
+            if conn.is_closed:
+                stale.append(user_id)
+                continue
+            try:
+                # Send ping to check if connection is alive
+                await asyncio.wait_for(
+                    conn.websocket.send_json({"type": "ping"}),
+                    timeout=5.0,
+                )
+            except Exception:
+                stale.append(user_id)
+
+        # Disconnect stale connections
         for user_id in stale:
             logger.info(f"Cleaning up stale connection for {user_id}")
             await self.disconnect(user_id)

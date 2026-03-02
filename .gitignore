@@ -42,3 +42,4 @@ backend/.env
 backend/*.pyc
 /venv
 __pycache__/
+/backend/docker-compose.yml

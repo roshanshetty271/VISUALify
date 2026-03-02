@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     database_url: str  # postgresql+asyncpg://user:pass@host:5432/db
 
     # === REDIS ===
-    redis_url: str = "redis://localhost:6379"
+    redis_url: str | None = "redis://localhost:6379"
 
     # === SPOTIFY OAUTH ===
     spotify_client_id: str

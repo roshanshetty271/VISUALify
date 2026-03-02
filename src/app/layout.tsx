@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter, Montserrat, Space_Grotesk } from 'next/font/google';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { Providers } from './providers';
+import { Navigation } from '@/components/Navigation';
 import './globals.css';
 
 const inter = Inter({ 
@@ -33,7 +35,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${montserrat.variable} ${spaceGrotesk.variable} font-sans bg-[#0a0a0f] text-white antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <Navigation />
+            {children}
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
