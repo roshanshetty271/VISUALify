@@ -2,7 +2,7 @@
   "framework": "nextjs",
   "functions": {
     "api/index.py": {
-      "runtime": "@vercel/python@latest",
+      "runtime": "@vercel/python",
       "maxDuration": 10
     }
   },
