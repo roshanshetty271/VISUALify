@@ -28,7 +28,6 @@ export function VisualizerContainer() {
   useBPM();
 
   const isLoading = useIsLoading();
-  usePlayerError();
   const currentTrack = useCurrentTrack();
 
   const setTheme = useThemeStore((s) => s.setTheme);
