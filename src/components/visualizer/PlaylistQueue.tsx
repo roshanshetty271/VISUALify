@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useCurrentTrack, useRecentTracks } from '@/stores';
 import Image from 'next/image';
 
@@ -11,6 +12,12 @@ interface QueuePanelProps {
 export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
   const currentTrack = useCurrentTrack();
   const recentTracks = useRecentTracks();
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  const dedupedRecentTracks = useMemo(
+    () => recentTracks.filter((track, index, arr) => arr.findIndex((t) => t.id === track.id) === index),
+    [recentTracks]
+  );
 
   if (!isOpen) return null;
 
@@ -49,15 +56,27 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
           <div className="p-4 border-b border-white/10">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Now Playing</p>
             <div className="flex items-center gap-3">
-              {currentTrack.albumArt && (
+              {currentTrack.albumArt && !failedImages[`current-${currentTrack.id}`] ? (
                 <div className="relative w-14 h-14 flex-shrink-0">
                   <Image
                     src={currentTrack.albumArt}
                     alt={currentTrack.albumName}
                     fill
                     className="rounded-lg object-cover"
+                    onError={() => {
+                      setFailedImages((prev) => ({
+                        ...prev,
+                        [`current-${currentTrack.id}`]: true,
+                      }));
+                    }}
                   />
                   <div className="absolute inset-0 rounded-lg ring-2 ring-[var(--theme-primary)]/50" />
+                </div>
+              ) : (
+                <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-zinc-800/80 border border-white/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 2a7 7 0 016.85 5.54 4.99 4.99 0 00-6.8 4.63v3.43A7 7 0 0112 5zm2 10.17a3 3 0 113.43 2.97v-2.97h-3.43zM11 8h2v7.17a5 5 0 00-2 3.99V8z" />
+                  </svg>
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -84,7 +103,7 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
         <div className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Recently Played</p>
           <div className="space-y-2">
-            {recentTracks.slice(0, 15).map((track, index) => (
+            {dedupedRecentTracks.slice(0, 15).map((track, index) => (
               <div 
                 key={`${track.id}-${index}`}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
@@ -92,14 +111,26 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
                 <span className="w-5 text-center text-gray-600 text-sm font-mono">
                   {index + 1}
                 </span>
-                {track.albumArt && (
+                {track.albumArt && !failedImages[`${track.id}-${track.playedAt ?? index}`] ? (
                   <div className="relative w-10 h-10 flex-shrink-0">
                     <Image
                       src={track.albumArt}
                       alt={track.albumName}
                       fill
                       className="rounded object-cover"
+                      onError={() => {
+                        setFailedImages((prev) => ({
+                          ...prev,
+                          [`${track.id}-${track.playedAt ?? index}`]: true,
+                        }));
+                      }}
                     />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 flex-shrink-0 rounded bg-zinc-800/80 border border-white/10 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 2a7 7 0 016.85 5.54 4.99 4.99 0 00-6.8 4.63v3.43A7 7 0 0112 5zm2 10.17a3 3 0 113.43 2.97v-2.97h-3.43zM11 8h2v7.17a5 5 0 00-2 3.99V8z" />
+                    </svg>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -112,7 +143,7 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
             ))}
           </div>
 
-          {recentTracks.length === 0 && (
+          {dedupedRecentTracks.length === 0 && (
             <p className="text-gray-500 text-sm text-center py-8">
               No recent tracks yet
             </p>

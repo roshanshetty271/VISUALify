@@ -18,9 +18,9 @@ export function useRecentTracks() {
       try {
         const data = await spotifyClient.getRecentlyPlayed(accessToken, 10);
         if (data?.items) {
-          const tracks = data.items.map((item) =>
-            normalizeTrack(item.track, item.played_at)
-          );
+          const tracks = data.items
+            .map((item) => normalizeTrack(item.track, item.played_at))
+            .filter((track, index, arr) => arr.findIndex((t) => t.id === track.id) === index);
           setRecentTracks(tracks);
         }
       } catch (err) {

@@ -16,7 +16,7 @@ import { ListeningTimeChart } from './ListeningTimeChart';
 import { AudioProfileRadar } from './AudioProfileRadar';
 import { MusicPhases } from './MusicPhases';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Main Stats Dashboard container

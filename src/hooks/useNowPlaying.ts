@@ -12,7 +12,7 @@ const POLL_INTERVAL_PLAYING = 3000;  // 3 seconds when playing (fallback only)
 const POLL_INTERVAL_IDLE = 10000;    // 10 seconds when idle (fallback only)
 const PROGRESS_UPDATE_INTERVAL = 50; // 50ms for smooth progress bar
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Hook for real-time now playing updates.

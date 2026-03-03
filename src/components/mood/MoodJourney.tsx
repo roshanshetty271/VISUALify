@@ -9,7 +9,7 @@ import { PeriodSelector } from '@/components/dashboard/PeriodSelector';
 import { MoodTimeline } from './MoodTimeline';
 import { MoodLegend } from './MoodLegend';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Main Mood Journey container

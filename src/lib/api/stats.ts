@@ -10,7 +10,7 @@ import type {
   MoodJourneyPoint,
 } from '@/types/stats';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Fetch helper that adds Authorization header
