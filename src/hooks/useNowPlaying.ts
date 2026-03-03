@@ -9,7 +9,7 @@ import { spotifyClient, SpotifyAPIError } from '@/lib/spotify';
 import { normalizeTrack } from '@/types';
 
 const POLL_INTERVAL_PLAYING = 3000;  // 3 seconds when playing (fallback only)
-const POLL_INTERVAL_IDLE = 10000;    // 10 seconds when idle (fallback only)
+const POLL_INTERVAL_IDLE = 3000;     // 3 seconds when idle to detect new playback quickly
 const PROGRESS_UPDATE_INTERVAL = 50; // 50ms for smooth progress bar
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -169,46 +169,64 @@ export function useNowPlaying() {
 
   const wsEnabled = !!process.env.NEXT_PUBLIC_WS_URL;
 
-  // === FALLBACK POLLING (only when WebSocket not connected) ===
+  // === FALLBACK POLLING (only when WebSocket is not active) ===
   useEffect(() => {
-    // Don't poll if WebSocket is connected (and WS is enabled)
-    if (wsEnabled && (wsConnected || backendToken)) return;
+    // Only skip polling when WebSocket is actually connected.
+    // Having a backend token alone does not guarantee a live WS connection.
+    if (wsEnabled && wsConnected) return;
     if (!session?.accessToken) return;
 
     console.log('[useNowPlaying] Using fallback polling');
 
-    let intervalId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isCancelled = false;
 
-    const startPolling = () => {
-      fetchNowPlaying();
-      const interval = store.isPlaying ? POLL_INTERVAL_PLAYING : POLL_INTERVAL_IDLE;
-      intervalId = setInterval(fetchNowPlaying, interval);
+    const poll = async () => {
+      if (isCancelled || document.hidden) return;
+
+      await fetchNowPlaying();
+
+      const isPlayingNow = usePlayerStore.getState().isPlaying;
+      const interval = isPlayingNow ? POLL_INTERVAL_PLAYING : POLL_INTERVAL_IDLE;
+
+      if (!isCancelled) {
+        timeoutId = setTimeout(poll, interval);
+      }
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        clearInterval(intervalId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
       } else {
-        startPolling();
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        void poll();
       }
     };
 
-    startPolling();
+    void poll();
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(intervalId);
+      isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (rateLimitTimeout.current) {
         clearTimeout(rateLimitTimeout.current);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [session?.accessToken, wsConnected, wsEnabled, backendToken, fetchNowPlaying, store.isPlaying]);
+  }, [session?.accessToken, wsConnected, wsEnabled, fetchNowPlaying]);
 
   return {
     forceSync,
     isWebSocketConnected: wsEnabled && wsConnected,
-    isUsingFallback: !wsEnabled || (!wsConnected && !backendToken),
+    isUsingFallback: !wsEnabled || !wsConnected,
     backendError,
     wsError,
   };

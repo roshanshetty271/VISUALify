@@ -8,7 +8,7 @@ import { normalizeTrack } from '@/types';
 
 export function useRecentTracks() {
   const { data: session } = useSession();
-  const { setRecentTracks } = usePlayerStore();
+  const { setRecentTracks, currentTrack } = usePlayerStore();
 
   useEffect(() => {
     if (!session?.accessToken) return;
@@ -16,7 +16,7 @@ export function useRecentTracks() {
 
     const fetchRecent = async () => {
       try {
-        const data = await spotifyClient.getRecentlyPlayed(accessToken, 10);
+        const data = await spotifyClient.getRecentlyPlayed(accessToken, 20);
         if (data?.items) {
           const tracks = data.items
             .map((item) => normalizeTrack(item.track, item.played_at))
@@ -29,10 +29,10 @@ export function useRecentTracks() {
     };
 
     fetchRecent();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchRecent, 5 * 60 * 1000);
+    // Refresh frequently so queue updates without manual sync clicks.
+    const interval = setInterval(fetchRecent, 30 * 1000);
 
     return () => clearInterval(interval);
-  }, [session?.accessToken, setRecentTracks]);
+  }, [session?.accessToken, currentTrack?.id, setRecentTracks]);
 }
 

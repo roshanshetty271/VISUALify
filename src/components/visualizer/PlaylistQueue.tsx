@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useCurrentTrack, useRecentTracks } from '@/stores';
-import Image from 'next/image';
 
 interface QueuePanelProps {
   isOpen: boolean;
@@ -56,17 +55,18 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
           <div className="p-4 border-b border-white/10">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Now Playing</p>
             <div className="flex items-center gap-3">
-              {currentTrack.albumArt && !failedImages[`current-${currentTrack.id}`] ? (
+              {currentTrack.albumArt && !failedImages[currentTrack.albumArt] ? (
                 <div className="relative w-14 h-14 flex-shrink-0">
-                  <Image
+                  <img
                     src={currentTrack.albumArt}
                     alt={currentTrack.albumName}
-                    fill
-                    className="rounded-lg object-cover"
+                    className="rounded-lg object-cover w-14 h-14"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
                     onError={() => {
                       setFailedImages((prev) => ({
                         ...prev,
-                        [`current-${currentTrack.id}`]: true,
+                        [currentTrack.albumArt]: true,
                       }));
                     }}
                   />
@@ -111,17 +111,18 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
                 <span className="w-5 text-center text-gray-600 text-sm font-mono">
                   {index + 1}
                 </span>
-                {track.albumArt && !failedImages[`${track.id}-${track.playedAt ?? index}`] ? (
+                {track.albumArt && !failedImages[track.albumArt] ? (
                   <div className="relative w-10 h-10 flex-shrink-0">
-                    <Image
+                    <img
                       src={track.albumArt}
                       alt={track.albumName}
-                      fill
-                      className="rounded object-cover"
+                      className="rounded object-cover w-10 h-10"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
                       onError={() => {
                         setFailedImages((prev) => ({
                           ...prev,
-                          [`${track.id}-${track.playedAt ?? index}`]: true,
+                          [track.albumArt]: true,
                         }));
                       }}
                     />
