@@ -1,6 +1,6 @@
 'use client';
 
-import { useProgress, useDuration, useIsPlaying } from '@/stores';
+import { useProgress, useDuration } from '@/stores';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -16,8 +16,6 @@ interface ProgressBarProps {
 export function ProgressBar({ compact = false }: ProgressBarProps) {
   const progress = useProgress();
   const duration = useDuration();
-  const isPlaying = useIsPlaying();
-
   const percentage = duration > 0 ? (progress / duration) * 100 : 0;
 
   if (compact) {

@@ -29,7 +29,6 @@ function applyForces(
   links: Link[],
   centerX: number,
   centerY: number,
-  energy: number
 ): Node[] {
   const repulsionStrength = 5000;
   const attractionStrength = 0.02;
@@ -113,7 +112,6 @@ export function NeuralMode() {
   const centerX = width / 2;
   const centerY = height / 2;
   const energy = audioFeatures?.energy ?? 0.5;
-  const valence = audioFeatures?.valence ?? 0.5;
   const tempo = audioFeatures?.tempo ?? 120;
 
   // Stable background elements
@@ -195,7 +193,7 @@ export function NeuralMode() {
   // Animation loop with force simulation
   const animate = useCallback(() => {
     timeRef.current += 0.02;
-    setNodes((prevNodes) => applyForces(prevNodes, links, centerX, centerY, energy));
+    setNodes((prevNodes) => applyForces(prevNodes, links, centerX, centerY));
     animationRef.current = requestAnimationFrame(animate);
   }, [links, centerX, centerY, energy]);
 

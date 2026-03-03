@@ -112,7 +112,7 @@ export function StatsDashboard() {
       // Invalidate all stats queries to refetch with new data
       queryClient.invalidateQueries({ queryKey: ['stats'] });
       queryClient.invalidateQueries({ queryKey: ['mood-journey'] });
-    } catch (error) {
+    } catch {
       setSyncMessage('Failed to sync history. Please try again.');
     } finally {
       setSyncing(false);

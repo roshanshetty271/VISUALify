@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { interpolateHsl } from 'd3-interpolate';
 import { color as d3color } from 'd3-color';
-import { useCurrentTrack, useAudioFeatures, useIsPlaying } from '@/stores';
+import { useAudioFeatures, useIsPlaying } from '@/stores';
 import { beatClock } from '@/lib/utils/beatClock';
 
 interface Ring {
@@ -28,7 +28,6 @@ interface Dust {
 const DUST_COUNT = 80;
 
 export function PulseMode() {
-  const currentTrack = useCurrentTrack();
   const audioFeatures = useAudioFeatures();
   const isPlaying = useIsPlaying();
 
@@ -177,7 +176,7 @@ export function PulseMode() {
     // Draw expanding rings
     const now2 = beatClock.now;
     ringsRef.current = ringsRef.current.filter((ring) => {
-      const _age = now2 - ring.birth;
+      void (now2 - ring.birth);
       const speed = ringSpeed(energy);
       ring.radius += speed * dt * 200;
 

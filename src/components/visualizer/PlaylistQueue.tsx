@@ -1,7 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useCurrentTrack, useRecentTracks } from '@/stores';
 import Image from 'next/image';
 

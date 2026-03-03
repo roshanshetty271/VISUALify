@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useNowPlaying, useRecentTracks, useBPM } from '@/hooks';
-import { useIsLoading, usePlayerError, useCurrentTrack } from '@/stores';
+import { useIsLoading, useCurrentTrack } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { PulseMode } from './PulseMode';
 import { GalaxyMode } from './GalaxyMode';
@@ -28,7 +28,7 @@ export function VisualizerContainer() {
   useBPM();
 
   const isLoading = useIsLoading();
-  const _error = usePlayerError();
+  usePlayerError();
   const currentTrack = useCurrentTrack();
 
   const setTheme = useThemeStore((s) => s.setTheme);
