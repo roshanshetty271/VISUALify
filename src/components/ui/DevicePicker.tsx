@@ -50,31 +50,27 @@ export function DevicePicker() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger button */}
       <button
         onClick={handleOpen}
-        className={`
-          flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium
-          transition-all duration-300
-          ${activeDevice 
-            ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20' 
-            : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/30'
-          }
-        `}
+        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+          activeDevice
+            ? 'text-zinc-300 hover:text-white hover:bg-white/[0.1]'
+            : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.08]'
+        }`}
         title={activeDevice ? `Playing on ${activeDevice.name}` : 'No active device'}
       >
         {isLoading ? (
-          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
         ) : (
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/>
           </svg>
         )}
         <span className="hidden sm:inline truncate max-w-[100px]">
-          {activeDevice?.name || 'No Device'}
+          {activeDevice?.name || 'No device'}
         </span>
       </button>
 

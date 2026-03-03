@@ -1,0 +1,34 @@
+{
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/auth/token",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/api/auth/me",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/api/auth/logout",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/api/auth/account",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/api/stats/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/health(.*)",
+      "dest": "api/index.py"
+    }
+  ]
+}

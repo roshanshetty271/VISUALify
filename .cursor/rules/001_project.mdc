@@ -33,17 +33,23 @@ Real-time Spotify music visualization web app.
 - Types: `src/types/`
 
 ## Naming Conventions
-- Components: PascalCase (`GalaxyMode.tsx`)
+- Components: PascalCase (`PulseMode.tsx`)
 - Hooks: camelCase with `use` prefix (`useNowPlaying.ts`)
 - Stores: camelCase with `use` prefix (`usePlayerStore.ts`)
-- Utils: camelCase (`colors.ts`)
+- Utils: camelCase (`beatClock.ts`, `colors.ts`)
 
 ## Import Aliases
 Use `@/` prefix for all imports:
 ```tsx
-import { GalaxyMode } from '@/components/visualizer';
+import { PulseMode } from '@/components/visualizer';
 import { usePlayerStore } from '@/stores';
 ```
+
+## D3 Usage Pattern
+D3 handles math/data mapping; Canvas 2D handles rendering. D3 never touches the DOM directly in visualizer modes.
+- `d3-ease` — Beat decay curves (easeExpOut) in BeatClock
+- `d3-scale` — Mapping audio features (0-1) to visual params (sizes, colors, speeds)
+- `d3-interpolate` — Smooth HSL color blending based on valence
 
 ## Documentation
 Read project docs in `/docs` folder before implementing features.

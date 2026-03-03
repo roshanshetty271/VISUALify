@@ -1,368 +1,180 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
 import { LoginButton } from '@/components/auth';
-import { useEffect, useState, useMemo } from 'react';
 
-// Generate stable sparkle positions
-function generateSparkles(count: number) {
-  const sparkles = [];
-  for (let i = 0; i < count; i++) {
-    sparkles.push({
-      id: i,
-      left: `${(i * 17 + 5) % 100}%`,
-      top: `${(i * 23 + 10) % 100}%`,
-      size: 2 + (i % 3),
-      delay: (i * 0.3) % 5,
-      duration: 3 + (i % 4),
-    });
-  }
-  return sparkles;
-}
-
-const FEATURES = [
-  {
-    icon: '🌌',
-    title: 'Galaxy Mode',
-    description: 'Your tracks orbit as planets around a pulsing sun',
-  },
-  {
-    icon: '⛰️',
-    title: 'Terrain Mode',
-    description: 'Synthwave mountains that react to energy levels',
-  },
-  {
-    icon: '🧠',
-    title: 'Neural Mode',
-    description: 'Connected nodes form a living neural network',
-  },
-  {
-    icon: '🌊',
-    title: 'River Mode',
-    description: 'Flowing waves carry your listening history',
-  },
-  {
-    icon: '📊',
-    title: 'Waveform Mode',
-    description: 'Classic audio bars with a modern twist',
-  },
-  {
-    icon: '✨',
-    title: 'Particles Mode',
-    description: 'Thousands of particles dance to your music',
-  },
+const MODES = [
+  { name: 'Pulse', desc: 'Beat-reactive rings that explode from the center', color: '#1DB954' },
+  { name: 'Orbit', desc: 'Tracks orbit a pulsing sun in deep space', color: '#3B82F6' },
+  { name: 'Particles', desc: 'Swarm of points that scatter on every beat', color: '#8B5CF6' },
 ];
 
-const VISUALIZER_PREVIEWS = [
-  { mode: 'GALAXY', color: '#1DB954' },
-  { mode: 'TERRAIN', color: '#8B5CF6' },
-  { mode: 'NEURAL', color: '#3B82F6' },
-  { mode: 'RIVER', color: '#06B6D4' },
-];
+const ERROR_MESSAGES: Record<string, string> = {
+  OAuthCallback: 'Spotify login didn\'t complete. This sometimes happens on the first try — click below to try again.',
+  OAuthSignin: 'Couldn\'t start Spotify login. Please try again.',
+  OAuthAccountNotLinked: 'This Spotify account is already linked to another login.',
+  Callback: 'Something went wrong during login. Please try again.',
+  Default: 'Login failed. Please try again.',
+};
 
 export default function Home() {
-  const [activePreview, setActivePreview] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
-  
-  // Stable sparkles - generated once
-  const sparkles = useMemo(() => generateSparkles(30), []);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActivePreview((prev) => (prev + 1) % VISUALIZER_PREVIEWS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    if (session) {
+      router.replace('/visualizer');
+      return;
+    }
 
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const currentColor = VISUALIZER_PREVIEWS[activePreview].color;
+    const error = searchParams.get('error');
+    if (error) {
+      setAuthError(ERROR_MESSAGES[error] || ERROR_MESSAGES.Default);
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams, session, router]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#030305]">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-4">
-        {/* Dynamic animated background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Main center glow - follows color */}
-          <div 
-            className="absolute w-[1000px] h-[1000px] rounded-full blur-[200px] transition-all duration-1000 ease-in-out"
-            style={{
-              background: `radial-gradient(circle, ${currentColor}20 0%, ${currentColor}08 40%, transparent 70%)`,
-              top: '40%',
-              left: '50%',
-              transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})`,
-            }}
-          />
-          
-          {/* Upper left accent glow */}
-          <div 
-            className="absolute w-[600px] h-[600px] rounded-full blur-[150px] transition-all duration-1000"
-            style={{
-              background: `radial-gradient(circle, ${currentColor}15 0%, transparent 60%)`,
-              top: '-10%',
-              left: '-10%',
-            }}
-          />
-          
-          {/* Lower right accent glow */}
-          <div 
-            className="absolute w-[500px] h-[500px] rounded-full blur-[120px] transition-all duration-1000"
-            style={{
-              background: `radial-gradient(circle, ${currentColor}10 0%, transparent 60%)`,
-              bottom: '0%',
-              right: '-5%',
-            }}
-          />
-          
-          
-          {/* Sparkles */}
-          {sparkles.map((sparkle) => (
-            <div
-              key={sparkle.id}
-              className="absolute rounded-full animate-pulse"
-              style={{
-                left: sparkle.left,
-                top: sparkle.top,
-                width: `${sparkle.size}px`,
-                height: `${sparkle.size}px`,
-                background: currentColor,
-                opacity: 0.3 + (sparkle.id % 5) * 0.1,
-                boxShadow: `0 0 ${sparkle.size * 3}px ${currentColor}`,
-                animationDelay: `${sparkle.delay}s`,
-                animationDuration: `${sparkle.duration}s`,
-                transition: 'background 1s, box-shadow 1s',
-              }}
-            />
-          ))}
-          
-          {/* Larger floating orbs */}
-          <div 
-            className="absolute w-3 h-3 rounded-full blur-[1px] animate-float transition-all duration-1000"
-            style={{
-              background: currentColor,
-              opacity: 0.4,
-              boxShadow: `0 0 20px ${currentColor}`,
-              left: '15%',
-              top: '25%',
-            }}
-          />
-          <div 
-            className="absolute w-2 h-2 rounded-full blur-[1px] animate-float-slow transition-all duration-1000"
-            style={{
-              background: currentColor,
-              opacity: 0.3,
-              boxShadow: `0 0 15px ${currentColor}`,
-              right: '20%',
-              top: '30%',
-            }}
-          />
-          <div 
-            className="absolute w-4 h-4 rounded-full blur-[2px] animate-float-slower transition-all duration-1000"
-            style={{
-              background: currentColor,
-              opacity: 0.2,
-              boxShadow: `0 0 25px ${currentColor}`,
-              left: '75%',
-              bottom: '25%',
-            }}
-          />
-          <div 
-            className="absolute w-2 h-2 rounded-full blur-[1px] animate-float transition-all duration-1000"
-            style={{
-              background: currentColor,
-              opacity: 0.35,
-              boxShadow: `0 0 12px ${currentColor}`,
-              left: '30%',
-              bottom: '35%',
-            }}
-          />
-          
-          {/* Subtle grid overlay */}
-          <div 
-            className="absolute inset-0 opacity-[0.015]"
-            style={{
-              backgroundImage: `
-                linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
-              `,
-              backgroundSize: '60px 60px',
-            }}
-          />
-        </div>
+    <main className="min-h-screen bg-white text-zinc-900 selection:bg-[#1DB954]/20">
+      {/* Hero */}
+      <section className="relative min-h-[100dvh] flex flex-col items-center justify-center px-6 overflow-hidden">
+        <div
+          className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(29,185,84,0.12) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(29,185,84,0.09) 0%, transparent 65%)' }}
+        />
 
-        {/* Hero content */}
-        <div className="relative z-10 text-center space-y-6 max-w-4xl mx-auto">
-          {/* Mode indicator */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {VISUALIZER_PREVIEWS.map((preview, i) => (
-              <button
-                key={preview.mode}
-                onClick={() => setActivePreview(i)}
-                className={`px-3 py-1 text-xs font-mono rounded-full transition-all duration-300 ${
-                  i === activePreview 
-                    ? 'bg-white/10 text-white' 
-                    : 'text-gray-600 hover:text-gray-400'
-                }`}
-              >
-                {preview.mode}
-              </button>
-            ))}
-          </div>
-
-          {/* Logo */}
-          <h1 className="text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight">
-            <span className="text-white">VISUAL</span>
-            <span 
-              className="transition-colors duration-500"
-              style={{ color: VISUALIZER_PREVIEWS[activePreview].color }}
-            >
-              ify
-            </span>
+        <div className="relative z-10 text-center max-w-2xl mx-auto">
+          <h1 className="text-[clamp(4.5rem,12vw,9rem)] font-bold tracking-tight leading-[0.9] mb-8">
+            VISUAL<span className="text-[#1DB954]">ify</span>
           </h1>
-
-          {/* Main tagline */}
-          <p className="text-2xl md:text-3xl lg:text-4xl text-gray-300 font-light tracking-wide">
-            Transform your Spotify into art
+          <p className="text-lg md:text-xl text-zinc-500 font-light leading-relaxed mb-10">
+            Real-time visualizations that react to
+            <br className="hidden md:block" />
+            {' '}your Spotify playback.
           </p>
 
-          {/* Description */}
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            Real-time music visualization that turns your listening experience 
-            into stunning animated graphics. 6 unique modes, each reacting to 
-            tempo, energy, and mood of your music.
-          </p>
-
-          {/* CTA */}
-          <div className="pt-8 flex flex-col items-center gap-4">
-            <LoginButton />
-            <p className="text-sm text-gray-600">
-              Free • No credit card • Requires Spotify account
-            </p>
-          </div>
-        </div>
-
-      </section>
-
-      {/* Features Section */}
-      <section className="relative py-32 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Section header */}
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              6 Stunning Visualization Modes
-            </h2>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Each mode creates a unique visual experience based on your music's 
-              characteristics — tempo, energy, danceability, and mood.
-            </p>
-          </div>
-
-          {/* Features grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((feature, i) => (
-              <div
-                key={feature.title}
-                className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.04] transition-all duration-300"
-                style={{ animationDelay: `${i * 100}ms` }}
+          {authError && (
+            <div className="mb-6 mx-auto max-w-md bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-left">
+                <p className="text-sm text-red-700">{authError}</p>
+              </div>
+              <button
+                onClick={() => setAuthError(null)}
+                className="ml-auto text-red-400 hover:text-red-600 shrink-0"
               >
-                {/* Icon */}
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                
-                {/* Title */}
-                <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-spotify-green transition-colors">
-                  {feature.title}
-                </h3>
-                
-                {/* Description */}
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  {feature.description}
-                </p>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
 
-                {/* Hover glow */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-spotify-green/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works section */}
-      <section className="relative py-32 px-4 border-t border-white/[0.05]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              How It Works
-            </h2>
-          </div>
-
-          <div className="space-y-12 max-w-4xl mx-auto">
-            {[
-              {
-                step: '01',
-                title: 'Connect Spotify',
-                description: 'One-click login with your Spotify account. We only read your currently playing track — nothing else.',
-              },
-              {
-                step: '02',
-                title: 'Play Music',
-                description: 'Start playing any song on Spotify. It works with the desktop app, web player, or mobile.',
-              },
-              {
-                step: '03',
-                title: 'Watch It Come Alive',
-                description: 'Your visualization instantly syncs to your music, reacting to beats, tempo, and energy in real-time.',
-              },
-            ].map((item) => (
-              <div key={item.step} className="flex gap-6 md:gap-8 items-start">
-                <div 
-                  className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full bg-spotify-green/10 flex items-center justify-center text-spotify-green font-mono text-base md:text-lg font-bold"
-                >
-                  {item.step}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">{item.title}</h3>
-                  <p className="text-gray-500 text-base md:text-lg leading-relaxed">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="relative py-32 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Glow effect */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-spotify-green/10 rounded-full blur-[150px] pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col items-center">
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              Ready to see your music?
-            </h2>
-            <p className="text-xl text-gray-400 mb-10">
-              Join thousands of music lovers who visualize their listening experience.
-            </p>
+          <div className="flex flex-col items-center gap-3">
             <LoginButton />
+            <span className="text-[11px] text-zinc-400 tracking-wide">
+              Free &middot; Requires Spotify
+            </span>
           </div>
+        </div>
+
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-zinc-300">
+          <span className="text-[10px] uppercase tracking-[0.2em]">Scroll</span>
+          <div className="w-px h-6 bg-zinc-200" />
+        </div>
+      </section>
+
+      {/* Modes */}
+      <section className="py-28 px-6 bg-zinc-50">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-[11px] text-zinc-400 uppercase tracking-[0.2em] mb-16">
+            Three visualization modes
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-14">
+            {MODES.map((mode) => (
+              <div key={mode.name} className="group">
+                <div
+                  className="h-px mb-5 transition-all duration-300 w-8 group-hover:w-14"
+                  style={{ backgroundColor: mode.color }}
+                />
+                <h3 className="text-xl font-semibold mb-1.5 tracking-tight">
+                  {mode.name}
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  {mode.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Explanation */}
+      <section className="py-28 px-6">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-[1fr,1fr] gap-16 md:gap-24">
+          <div>
+            <h2 className="text-3xl md:text-[2.5rem] font-bold leading-[1.15] tracking-tight">
+              Your music already
+              <br />
+              has a visual language.
+            </h2>
+            <p className="mt-4 text-lg text-[#1DB954] font-light">
+              We just render it.
+            </p>
+          </div>
+          <div className="space-y-5 text-[15px] text-zinc-500 leading-[1.75]">
+            <p>
+              Every track on Spotify carries data — tempo, energy, valence,
+              danceability. VISUALify reads these audio features in real-time
+              and translates them into animated graphics that breathe with
+              your music.
+            </p>
+            <p>
+              Connect your account, pick a mode, play something. The
+              visualizer syncs instantly. Switch tracks and the whole scene
+              reshapes.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-32 px-6 bg-[#1DB954]">
+        <div className="max-w-5xl mx-auto flex flex-col items-center text-center">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-10">
+            See what you hear.
+          </h2>
+          <button
+            onClick={() => signIn('spotify', { callbackUrl: '/visualizer' })}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-white text-[#1DB954] font-bold text-lg rounded-full transition-all duration-200 hover:bg-zinc-50 hover:scale-[1.02]"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+            </svg>
+            Get Started
+          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative py-8 px-4 border-t border-white/[0.05]">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-gray-600 text-sm">
-          <div className="flex items-center">
-            <span className="font-bold text-white">VISUAL</span>
-            <span className="text-spotify-green">ify</span>
+      <footer className="py-8 px-6 border-t border-zinc-100">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-zinc-400 tracking-wide">
+          <div>
+            <span className="font-bold text-zinc-900">VISUAL</span>
+            <span className="text-[#1DB954]">ify</span>
           </div>
-          <div className="flex items-center gap-6">
-            <span>Powered by Spotify Web API</span>
-            <span>•</span>
-            <span>Built with Next.js & D3.js</span>
-          </div>
+          <span>Built with Next.js, D3.js &amp; the Spotify Web API</span>
         </div>
       </footer>
     </main>

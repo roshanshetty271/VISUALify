@@ -80,11 +80,11 @@ src/
 
 ## Features
 
-- 🎵 **Real-time sync** with Spotify playback
-- 🌌 **4 visualization modes**: Galaxy, Terrain, Neural, River
-- 💓 **BPM-synced animations** that pulse to the beat
-- 🎨 **Audio feature mapping**: energy → color, tempo → speed
-- ⚡ **Rate limit handling** with graceful backoff
+- **Real-time sync** with Spotify playback
+- **3 visualization modes**: Pulse, Orbit, Particles — each beat-reactive with exponential decay
+- **BPM-synced animations** powered by a shared BeatClock using D3 easing curves
+- **Audio feature mapping**: energy, valence, and tempo drive colors, sizes, and speeds via D3 scales
+- **Rate limit handling** with graceful backoff
 
 ---
 
@@ -94,7 +94,7 @@ src/
 |-------|------------|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript (strict) |
-| Visualization | D3.js |
+| Visualization | D3.js (d3-ease, d3-scale, d3-interpolate) + Canvas 2D |
 | Styling | Tailwind CSS |
 | State | Zustand |
 | Auth | NextAuth.js |

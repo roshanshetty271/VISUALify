@@ -167,10 +167,12 @@ export function useNowPlaying() {
     };
   }, [store.isPlaying, store]);
 
+  const wsEnabled = !!process.env.NEXT_PUBLIC_WS_URL;
+
   // === FALLBACK POLLING (only when WebSocket not connected) ===
   useEffect(() => {
-    // Don't poll if WebSocket is connected or trying to connect
-    if (wsConnected || backendToken) return;
+    // Don't poll if WebSocket is connected (and WS is enabled)
+    if (wsEnabled && (wsConnected || backendToken)) return;
     if (!session?.accessToken) return;
 
     console.log('[useNowPlaying] Using fallback polling');
@@ -201,12 +203,12 @@ export function useNowPlaying() {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [session?.accessToken, wsConnected, backendToken, fetchNowPlaying, store.isPlaying]);
+  }, [session?.accessToken, wsConnected, wsEnabled, backendToken, fetchNowPlaying, store.isPlaying]);
 
   return {
     forceSync,
-    isWebSocketConnected: wsConnected,
-    isUsingFallback: !wsConnected && !backendToken,
+    isWebSocketConnected: wsEnabled && wsConnected,
+    isUsingFallback: !wsEnabled || (!wsConnected && !backendToken),
     backendError,
     wsError,
   };

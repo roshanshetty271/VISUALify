@@ -1,7 +1,12 @@
 # backend/app/database.py
 """
 SQLAlchemy async database configuration.
+
+Supports both long-lived (uvicorn) and serverless (Vercel) runtimes.
+In serverless mode (ENVIRONMENT=production + no persistent process),
+NullPool is used to avoid leaked connections across cold starts.
 """
+import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -9,10 +14,12 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
-# Lazy engine initialization
 _engine = None
 _session_factory = None
+
+_is_serverless = os.environ.get("VERCEL", "") == "1"
 
 
 class Base(DeclarativeBase):
@@ -26,13 +33,22 @@ def get_engine():
     if _engine is None:
         from app.config import get_settings
         settings = get_settings()
+
+        pool_kwargs = (
+            {"poolclass": NullPool}
+            if _is_serverless
+            else {
+                "pool_size": 5,
+                "max_overflow": 10,
+                "pool_recycle": 300,
+            }
+        )
+
         _engine = create_async_engine(
             settings.database_url,
             echo=settings.debug,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-            pool_recycle=3600,
+            **pool_kwargs,
         )
     return _engine
 

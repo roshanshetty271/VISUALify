@@ -9,7 +9,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.websocket.manager import manager
+
+try:
+    from app.websocket.manager import manager as _ws_manager
+except ImportError:
+    _ws_manager = None
 
 router = APIRouter(tags=["Health"])
 
@@ -54,8 +58,8 @@ async def readiness_check(
     from app.core.cache import cache_health
     checks["redis"] = await cache_health()
 
-    # WebSocket stats (informational)
-    checks["websocket_connections"] = manager.connection_count
+    if _ws_manager is not None:
+        checks["websocket_connections"] = _ws_manager.connection_count
 
     status_code = 200 if overall_status == "ready" else 503
 

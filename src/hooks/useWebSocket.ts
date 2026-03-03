@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlayerStore } from '@/stores';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || '';
 
 interface WebSocketState {
   isConnected: boolean;
@@ -57,6 +57,9 @@ export function useWebSocket({ token, enabled = true }: UseWebSocketOptions): We
 
   // Main connection effect - only depends on token and enabled
   useEffect(() => {
+    // No WebSocket URL configured (e.g. Vercel serverless) — skip entirely
+    if (!WS_URL) return;
+
     isMountedRef.current = true;
     
     const connect = () => {

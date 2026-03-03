@@ -20,24 +20,19 @@ const handler = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account }) {
-      // Initial sign in - store all tokens
       if (account) {
-        console.log('Initial sign in - storing tokens');
         return {
           ...token,
-          accessToken: account.access_token!,
-          refreshToken: account.refresh_token!,
-          expiresAt: account.expires_at! * 1000, // Convert to milliseconds
+          accessToken: account.access_token ?? '',
+          refreshToken: account.refresh_token ?? '',
+          expiresAt: (account.expires_at ?? 0) * 1000,
         };
       }
 
-      // Return existing token if not expired
       if (!shouldRefreshToken(token.expiresAt)) {
         return token;
       }
 
-      // Token expired or expiring soon - refresh it
-      console.log('Token expiring, refreshing...');
       return refreshAccessToken(token);
     },
 
@@ -49,6 +44,7 @@ const handler = NextAuth({
   },
   pages: {
     signIn: '/',
+    error: '/',
   },
 });
 

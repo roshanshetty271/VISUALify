@@ -1,8 +1,5 @@
+export { PulseMode } from './PulseMode';
 export { GalaxyMode } from './GalaxyMode';
-export { TerrainMode } from './TerrainMode';
-export { NeuralMode } from './NeuralMode';
-export { RiverMode } from './RiverMode';
-export { WaveformMode } from './WaveformMode';
 export { ParticlesMode } from './ParticlesMode';
 export { NowPlaying } from './NowPlaying';
 export { ProgressBar } from './ProgressBar';

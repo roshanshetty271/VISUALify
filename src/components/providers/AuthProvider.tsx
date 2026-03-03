@@ -7,9 +7,14 @@ function SessionGuard({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
 
   useEffect(() => {
-    // Auto re-login if refresh token failed
+    // Pre-warm the CSRF cookie so the first sign-in click works instantly.
+    // Without this, the CSRF token might not exist yet on a cold visit,
+    // causing the OAuth callback to fail with an OAuthCallback error.
+    fetch('/api/auth/csrf');
+  }, []);
+
+  useEffect(() => {
     if (session?.error === 'RefreshAccessTokenError') {
-      console.log('Refresh token expired, redirecting to login...');
       signIn('spotify');
     }
   }, [session?.error]);

@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useCurrentTrack, useRecentTracks, useAudioFeatures, useIsPlaying } from '@/stores';
 import { generateStars } from '@/lib/utils/seededRandom';
+import { beatClock, valenceColor } from '@/lib/utils/beatClock';
 
 interface Node {
   id: string;
@@ -35,8 +36,8 @@ export function GalaxyMode() {
   const audioFeatures = useAudioFeatures();
   const isPlaying = useIsPlaying();
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const timeRef = useRef(0);
   const animationRef = useRef<number | null>(null);
+  const lastFrameRef = useRef(performance.now());
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
@@ -51,22 +52,19 @@ export function GalaxyMode() {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // requestAnimationFrame for smooth animation - ALWAYS runs, but slower when paused
   const animate = useCallback(() => {
-    // Speed multiplier: full speed when playing, slow idle animation when paused
-    const speedMultiplier = isPlaying ? 1 : 0.1;
-    timeRef.current += 0.015 * speedMultiplier;
+    const now = performance.now();
+    const dt = Math.min((now - lastFrameRef.current) / 1000, 0.05);
+    lastFrameRef.current = now;
+    beatClock.tick(dt, isPlaying);
     forceUpdate((n) => n + 1);
     animationRef.current = requestAnimationFrame(animate);
   }, [isPlaying]);
 
   useEffect(() => {
-    // Always start animation
     animationRef.current = requestAnimationFrame(animate);
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [animate]);
 
@@ -78,18 +76,18 @@ export function GalaxyMode() {
   const valence = audioFeatures?.valence ?? 0.5;
   const tempo = audioFeatures?.tempo ?? 120;
 
-  // Stable star field using seeded random
+  const kick = beatClock.kick(tempo);
+  const halfKick = beatClock.halfBeat(tempo);
+
   const stars = useMemo(() => generateStars(150, 12345), []);
 
-  // Nebula clouds
   const nebulae: Nebula[] = useMemo(() => [
-    { cx: 20, cy: 30, rx: 25, ry: 15, color: '#1DB954', opacity: 0.08, rotation: 15 },
-    { cx: 75, cy: 20, rx: 20, ry: 12, color: '#3b82f6', opacity: 0.06, rotation: -10 },
-    { cx: 85, cy: 70, rx: 18, ry: 22, color: '#8b5cf6', opacity: 0.07, rotation: 25 },
-    { cx: 15, cy: 75, rx: 22, ry: 14, color: '#ef4444', opacity: 0.05, rotation: -20 },
+    { cx: 20, cy: 30, rx: 25, ry: 15, color: '#1DB954', opacity: 0.06, rotation: 15 },
+    { cx: 75, cy: 20, rx: 20, ry: 12, color: '#3b82f6', opacity: 0.05, rotation: -10 },
+    { cx: 85, cy: 70, rx: 18, ry: 22, color: '#8b5cf6', opacity: 0.05, rotation: 25 },
+    { cx: 15, cy: 75, rx: 22, ry: 14, color: '#ef4444', opacity: 0.04, rotation: -20 },
   ], []);
 
-  // Color scale
   const colorScale = useMemo(
     () => d3.scaleLinear<string>()
       .domain([0, 0.5, 1])
@@ -97,7 +95,8 @@ export function GalaxyMode() {
     []
   );
 
-  // Build nodes with orbital mechanics
+  const orbitRadii = [100, 145, 190, 235, 280, 325, 370, 415];
+
   const nodes: Node[] = useMemo(() => {
     const result: Node[] = [];
 
@@ -120,7 +119,7 @@ export function GalaxyMode() {
     recentTracks.slice(0, 8).forEach((track, index) => {
       if (track.id === currentTrack?.id) return;
 
-      const orbitRadius = 100 + index * 45;
+      const orbitRadius = orbitRadii[index] ?? 100 + index * 45;
       const orbitSpeed = (0.3 + (1 - index / 8) * 0.4) * (tempo / 120);
       const initialAngle = (index / 8) * 2 * Math.PI + index * 0.5;
 
@@ -142,16 +141,15 @@ export function GalaxyMode() {
     return result;
   }, [currentTrack, recentTracks, energy, tempo, centerX, centerY, colorScale]);
 
-  // Calculate animated positions with trails
   const animatedNodes = useMemo(() => {
+    const time = beatClock.now;
     return nodes.map((node) => {
       if (node.isCurrent) return node;
 
-      const angle = node.angle + timeRef.current * node.orbitSpeed;
+      const angle = node.angle + time * node.orbitSpeed;
       const x = centerX + Math.cos(angle) * node.orbitRadius;
       const y = centerY + Math.sin(angle) * node.orbitRadius * 0.6;
 
-      // Generate trail points
       const trailLength = 8;
       const trail = Array.from({ length: trailLength }, (_, i) => {
         const trailAngle = angle - (i + 1) * 0.08;
@@ -165,13 +163,39 @@ export function GalaxyMode() {
     });
   }, [nodes, centerX, centerY]);
 
+  const time = beatClock.now;
+
   if (!currentTrack) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4">
-        <div className="text-6xl animate-pulse">🌌</div>
-        <p className="text-lg font-display">Play something on Spotify</p>
-        <p className="text-sm text-gray-600">to ignite the galaxy</p>
-      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-full"
+        style={{ background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%)' }}
+      >
+        {nebulae.map((nebula, i) => (
+          <ellipse
+            key={`nebula-${i}`}
+            cx={`${nebula.cx}%`}
+            cy={`${nebula.cy}%`}
+            rx={`${nebula.rx}%`}
+            ry={`${nebula.ry}%`}
+            fill={nebula.color}
+            opacity={nebula.opacity}
+            transform={`rotate(${nebula.rotation + time * 2} ${width * nebula.cx / 100} ${height * nebula.cy / 100})`}
+            style={{ filter: 'blur(40px)' }}
+          />
+        ))}
+        {stars.map((star, i) => (
+          <circle
+            key={`star-${i}`}
+            cx={`${star.x}%`}
+            cy={`${star.y}%`}
+            r={star.size}
+            fill="white"
+            opacity={star.opacity + Math.sin(time * 2 + i) * 0.1}
+          />
+        ))}
+      </svg>
     );
   }
 
@@ -182,16 +206,14 @@ export function GalaxyMode() {
       style={{ background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%)' }}
     >
       <defs>
-        {/* Glow filter for sun */}
         <filter id="sunGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feGaussianBlur stdDeviation={8 + kick * 6} result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        
-        {/* Planet glow */}
+
         <filter id="planetGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feMerge>
@@ -210,8 +232,8 @@ export function GalaxyMode() {
           rx={`${nebula.rx}%`}
           ry={`${nebula.ry}%`}
           fill={nebula.color}
-          opacity={nebula.opacity + energy * 0.03}
-          transform={`rotate(${nebula.rotation + timeRef.current * 2} ${width * nebula.cx / 100} ${height * nebula.cy / 100})`}
+          opacity={nebula.opacity + energy * 0.02 + kick * 0.02}
+          transform={`rotate(${nebula.rotation + time * 2} ${width * nebula.cx / 100} ${height * nebula.cy / 100})`}
           style={{ filter: 'blur(40px)' }}
         />
       ))}
@@ -224,12 +246,12 @@ export function GalaxyMode() {
           cy={`${star.y}%`}
           r={star.size}
           fill="white"
-          opacity={star.opacity + Math.sin(timeRef.current * 2 + i) * 0.1}
+          opacity={star.opacity + Math.sin(time * 2 + i) * 0.1 + kick * 0.08}
         />
       ))}
 
-      {/* Orbit rings */}
-      {[100, 145, 190, 235, 280, 325, 370, 415].map((radius, i) => (
+      {/* Orbit rings — flash on beat */}
+      {orbitRadii.map((radius, i) => (
         <ellipse
           key={`orbit-${i}`}
           cx={centerX}
@@ -237,9 +259,10 @@ export function GalaxyMode() {
           rx={radius}
           ry={radius * 0.6}
           fill="none"
-          stroke="rgba(29, 185, 84, 0.08)"
-          strokeWidth="1"
+          stroke={valenceColor(valence, 'rgba(59, 130, 246, 0.12)', 'rgba(251, 191, 36, 0.12)')}
+          strokeWidth={1 + (i === 0 ? kick * 1.5 : halfKick * 0.5)}
           strokeDasharray="8,12"
+          opacity={0.5 + (i % 2 === 0 ? kick * 0.4 : halfKick * 0.2)}
         />
       ))}
 
@@ -259,18 +282,16 @@ export function GalaxyMode() {
         </g>
       ))}
 
-      {/* Planets (non-current tracks) */}
+      {/* Planets */}
       {animatedNodes.filter((n) => !n.isCurrent).map((node) => (
         <g key={node.id}>
-          {/* Planet glow */}
           <circle
             cx={node.x}
             cy={node.y}
             r={node.radius * 2}
             fill={node.color}
-            opacity={0.15}
+            opacity={0.12 + kick * 0.05}
           />
-          {/* Planet ring (for larger planets) */}
           {node.radius > 14 && (
             <ellipse
               cx={node.x}
@@ -284,7 +305,6 @@ export function GalaxyMode() {
               transform={`rotate(-20 ${node.x} ${node.y})`}
             />
           )}
-          {/* Planet body */}
           <circle
             cx={node.x}
             cy={node.y}
@@ -292,7 +312,6 @@ export function GalaxyMode() {
             fill={node.color}
             filter="url(#planetGlow)"
           />
-          {/* Planet highlight */}
           <circle
             cx={node.x - node.radius * 0.3}
             cy={node.y - node.radius * 0.3}
@@ -303,68 +322,52 @@ export function GalaxyMode() {
         </g>
       ))}
 
-      {/* Sun (current track) */}
-      {animatedNodes.filter((n) => n.isCurrent).map((node) => (
-        <g key={node.id}>
-          {/* Corona layers */}
-          <circle
-            cx={node.x}
-            cy={node.y}
-            r={node.radius * 3.5}
-            fill={node.color}
-            opacity={0.04 + Math.sin(timeRef.current * 3) * 0.02}
-          />
-          <circle
-            cx={node.x}
-            cy={node.y}
-            r={node.radius * 2.5}
-            fill={node.color}
-            opacity={0.08 + Math.sin(timeRef.current * 4) * 0.03}
-          />
-          <circle
-            cx={node.x}
-            cy={node.y}
-            r={node.radius * 1.8}
-            fill={node.color}
-            opacity={0.15 + Math.sin(timeRef.current * 5) * 0.05}
-          />
-          {/* Core */}
-          <circle
-            cx={node.x}
-            cy={node.y}
-            r={node.radius}
-            fill={node.color}
-            filter="url(#sunGlow)"
-          />
-          {/* Inner bright spot */}
-          <circle
-            cx={node.x - node.radius * 0.2}
-            cy={node.y - node.radius * 0.2}
-            r={node.radius * 0.35}
-            fill="white"
-            opacity={0.4}
-          />
-          {/* Track name */}
-          <text
-            x={node.x}
-            y={node.y + node.radius + 35}
-            textAnchor="middle"
-            fill="white"
-            fontSize="14"
-            fontWeight="bold"
-            className="font-display"
-          >
-            {node.name.length > 30 ? node.name.slice(0, 30) + '...' : node.name}
-          </text>
-        </g>
-      ))}
-
-      {/* Audio data overlay */}
-      <g className="font-mono" fontSize="11" fill="rgba(255,255,255,0.6)">
-        <text x={20} y={height - 60}>ENERGY {(energy * 100).toFixed(0)}%</text>
-        <text x={20} y={height - 42}>TEMPO {tempo.toFixed(0)} BPM</text>
-        <text x={20} y={height - 24}>VALENCE {(valence * 100).toFixed(0)}%</text>
-      </g>
+      {/* Sun (current track) — pulses on beat */}
+      {animatedNodes.filter((n) => n.isCurrent).map((node) => {
+        const sunRadius = node.radius + kick * energy * 12;
+        return (
+          <g key={node.id}>
+            {/* Corona layers — beat-reactive */}
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={sunRadius * 3.5 + kick * 20}
+              fill={node.color}
+              opacity={0.03 + kick * 0.04}
+            />
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={sunRadius * 2.5 + kick * 12}
+              fill={node.color}
+              opacity={0.06 + kick * 0.06}
+            />
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={sunRadius * 1.8 + kick * 6}
+              fill={node.color}
+              opacity={0.12 + kick * 0.08}
+            />
+            {/* Core */}
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={sunRadius}
+              fill={node.color}
+              filter="url(#sunGlow)"
+            />
+            {/* Inner bright spot */}
+            <circle
+              cx={node.x - sunRadius * 0.2}
+              cy={node.y - sunRadius * 0.2}
+              r={sunRadius * 0.35}
+              fill="white"
+              opacity={0.35 + kick * 0.15}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }
