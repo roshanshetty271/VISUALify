@@ -177,7 +177,7 @@ export function PulseMode() {
     // Draw expanding rings
     const now2 = beatClock.now;
     ringsRef.current = ringsRef.current.filter((ring) => {
-      const age = now2 - ring.birth;
+      const _age = now2 - ring.birth;
       const speed = ringSpeed(energy);
       ring.radius += speed * dt * 200;
 

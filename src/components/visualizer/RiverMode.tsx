@@ -105,7 +105,7 @@ export function RiverMode() {
 
   // Ripple circles at markers
   const ripples = useMemo(() => {
-    return trackPositions.map((pos, i) => {
+    return trackPositions.map((pos) => {
       const numRipples = pos.isCurrent ? 4 : 2;
       return Array.from({ length: numRipples }, (_, j) => ({
         delay: j * 0.5,

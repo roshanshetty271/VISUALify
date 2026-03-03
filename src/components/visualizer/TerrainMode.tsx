@@ -89,43 +89,42 @@ export function TerrainMode() {
   const baseHue = 280 + valence * 60;
   const sunColor = valence > 0.5 ? '#ff6b6b' : '#a0a0ff';
 
-  // Generate mountain points for a layer
-  const generateMountainPoints = (
-    layerIndex: number,
-    peakData: Array<{ heightFactor: number; widthFactor: number }>,
-    baseHeight: number,
-    heightMultiplier: number
-  ) => {
-    const numPeaks = peakData.length;
-    const points: Array<{ x: number; y: number }> = [];
-    
-    for (let i = 0; i <= numPeaks; i++) {
-      const x = (i / numPeaks) * width;
-      const peak = peakData[i % numPeaks];
-      const waveOffset = Math.sin(timeRef.current * 0.5 + i * 0.3 + layerIndex) * 10 * energy;
-      const peakHeight = baseHeight + peak.heightFactor * heightMultiplier * (1 + energy * 0.5) + waveOffset;
-      
-      points.push({ x, y: height - peakHeight });
-    }
-    
-    return points;
-  };
-
   // Mountain layers (back, mid, front)
   const mountainLayers = useMemo(() => {
+    const genPoints = (
+      layerIndex: number,
+      peakData: Array<{ heightFactor: number; widthFactor: number }>,
+      baseHeight: number,
+      heightMultiplier: number
+    ) => {
+      const numPeaks = peakData.length;
+      const points: Array<{ x: number; y: number }> = [];
+
+      for (let i = 0; i <= numPeaks; i++) {
+        const x = (i / numPeaks) * width;
+        const peak = peakData[i % numPeaks];
+        const waveOffset = Math.sin(timeRef.current * 0.5 + i * 0.3 + layerIndex) * 10 * energy;
+        const peakHeight = baseHeight + peak.heightFactor * heightMultiplier * (1 + energy * 0.5) + waveOffset;
+
+        points.push({ x, y: height - peakHeight });
+      }
+
+      return points;
+    };
+
     return [
       {
-        points: generateMountainPoints(0, peakFactors.back, 80, 180),
+        points: genPoints(0, peakFactors.back, 80, 180),
         color: `hsl(${baseHue}, 50%, 25%)`,
         opacity: 0.6,
       },
       {
-        points: generateMountainPoints(1, peakFactors.mid, 60, 220),
+        points: genPoints(1, peakFactors.mid, 60, 220),
         color: `hsl(${baseHue}, 60%, 35%)`,
         opacity: 0.8,
       },
       {
-        points: generateMountainPoints(2, peakFactors.front, 40, 280),
+        points: genPoints(2, peakFactors.front, 40, 280),
         color: `hsl(${baseHue}, 70%, 45%)`,
         opacity: 1,
       },
