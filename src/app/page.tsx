@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { LoginButton } from '@/components/auth';
@@ -19,7 +19,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   Default: 'Login failed. Please try again.',
 };
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
@@ -178,5 +178,17 @@ export default function Home() {
         </div>
       </footer>
     </main>
+  );
+}
+
+function HomeFallback() {
+  return <main className="min-h-screen bg-white" aria-hidden="true" />;
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<HomeFallback />}>
+      <HomeContent />
+    </Suspense>
   );
 }
