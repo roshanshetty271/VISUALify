@@ -12,10 +12,11 @@ export function useRecentTracks() {
 
   useEffect(() => {
     if (!session?.accessToken) return;
+    const accessToken = session.accessToken;
 
     const fetchRecent = async () => {
       try {
-        const data = await spotifyClient.getRecentlyPlayed(session.accessToken, 10);
+        const data = await spotifyClient.getRecentlyPlayed(accessToken, 10);
         if (data?.items) {
           const tracks = data.items.map((item) =>
             normalizeTrack(item.track, item.played_at)
