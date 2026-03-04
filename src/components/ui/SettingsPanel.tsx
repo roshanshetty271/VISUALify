@@ -1,7 +1,6 @@
 'use client';
 
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { useThemeStore, THEMES, ThemeName } from '@/stores/useThemeStore';
 
 interface SliderProps {
   label: string;
@@ -73,57 +72,12 @@ function Toggle({ label, checked, onChange }: ToggleProps) {
   );
 }
 
-function ThemeSelector() {
-  const { currentTheme, setTheme } = useThemeStore();
-
-  return (
-    <div className="space-y-3">
-      <span className="text-sm text-gray-400">Color Theme</span>
-      <div className="grid grid-cols-5 gap-2">
-        {(Object.keys(THEMES) as ThemeName[]).map((themeName) => {
-          const theme = THEMES[themeName];
-          const isActive = currentTheme === themeName;
-          
-          return (
-            <button
-              key={themeName}
-              onClick={() => setTheme(themeName)}
-              className={`
-                group relative flex flex-col items-center gap-1 p-2 rounded-lg
-                transition-all duration-200
-                ${isActive ? 'bg-white/10 ring-2 ring-white/30' : 'hover:bg-white/5'}
-              `}
-              title={theme.label}
-            >
-              {/* Color swatch */}
-              <div 
-                className="w-8 h-8 rounded-full shadow-lg transition-transform group-hover:scale-110"
-                style={{
-                  background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 100%)`,
-                  boxShadow: isActive ? `0 0 12px ${theme.primary}` : undefined,
-                }}
-              />
-              <span className="text-[10px] text-gray-500 group-hover:text-gray-300">
-                {theme.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export function SettingsPanel() {
   const {
     animationSpeed,
-    showStats,
-    showTrackLabels,
     glowIntensity,
     settingsPanelOpen,
     setAnimationSpeed,
-    setShowStats,
-    setShowTrackLabels,
     setGlowIntensity,
     setSettingsPanelOpen,
     resetToDefaults,
@@ -134,13 +88,13 @@ export function SettingsPanel() {
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
         onClick={() => setSettingsPanelOpen(false)}
       />
 
       {/* Panel */}
-      <div 
+      <div
         className="fixed right-0 top-0 h-full w-80 bg-[#0f0f18]/95 backdrop-blur-xl 
                    border-l border-white/10 z-50 overflow-y-auto
                    animate-in slide-in-from-right duration-300"
@@ -160,17 +114,9 @@ export function SettingsPanel() {
 
         {/* Content */}
         <div className="p-4 space-y-6">
-          {/* Theme */}
-          <section>
-            <ThemeSelector />
-          </section>
-
-          <hr className="border-white/10" />
-
-          {/* Animation Settings */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Animation</h3>
-            
+
             <Slider
               label="Animation Speed"
               value={animationSpeed}
@@ -188,25 +134,6 @@ export function SettingsPanel() {
               max={1}
               step={0.1}
               onChange={setGlowIntensity}
-            />
-          </section>
-
-          <hr className="border-white/10" />
-
-          {/* Display */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Display</h3>
-            
-            <Toggle
-              label="Show Audio Stats"
-              checked={showStats}
-              onChange={setShowStats}
-            />
-
-            <Toggle
-              label="Show Track Labels"
-              checked={showTrackLabels}
-              onChange={setShowTrackLabels}
             />
           </section>
 

@@ -45,15 +45,15 @@ export function ProgressBar({ compact = false }: ProgressBarProps) {
             style={{ width: `${percentage}%` }}
           >
             {/* Glowing edge */}
-            <div 
+            <div
               className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-              style={{ boxShadow: '0 0 8px #1DB954' }}
+              style={{ boxShadow: '0 0 8px var(--theme-primary)' }}
             />
           </div>
         </div>
 
         {/* Buffered indicator (optional visual) */}
-        <div 
+        <div
           className="absolute top-0 left-0 h-full pointer-events-none"
           style={{ width: `${Math.min(percentage + 5, 100)}%` }}
         >

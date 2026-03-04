@@ -1,6 +1,7 @@
 'use client';
 
 import { useCurrentTrack, useAudioFeatures } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { ProgressBar } from './ProgressBar';
 import { PlaybackControls } from './PlaybackControls';
 import Image from 'next/image';
@@ -9,6 +10,7 @@ import { useEffect, useState } from 'react';
 export function NowPlaying() {
   const track = useCurrentTrack();
   const features = useAudioFeatures();
+  const showStats = useSettingsStore((s) => s.showStats);
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
@@ -20,7 +22,10 @@ export function NowPlaying() {
   const showAlbumArt = Boolean(track.albumArt) && !imageError;
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-white/[0.06] backdrop-blur-2xl rounded-2xl border border-white/[0.1] max-w-2xl mx-auto shadow-[0_0_30px_rgba(29,185,84,0.08),0_4px_24px_rgba(0,0,0,0.4)]">
+    <div
+      className="flex flex-col gap-3 p-4 backdrop-blur-2xl rounded-2xl border border-white/[0.1] max-w-2xl mx-auto shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors duration-500"
+      style={{ backgroundColor: 'color-mix(in srgb, var(--theme-primary) 12%, rgba(20, 20, 20, 0.5))' }}
+    >
       <div className="flex items-center gap-4">
         {showAlbumArt ? (
           <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden shadow-lg shadow-black/40 ring-1 ring-white/[0.1]">
@@ -45,7 +50,7 @@ export function NowPlaying() {
             {track.name}
           </h3>
           <p className="text-zinc-400 text-sm truncate">{track.artist}</p>
-          {features && (
+          {showStats && features && (
             <div className="hidden sm:flex gap-3 mt-1.5 font-mono text-[10px] text-zinc-600">
               <span>{Math.round(features.energy * 100)}% energy</span>
               <span>{Math.round(features.tempo)} bpm</span>

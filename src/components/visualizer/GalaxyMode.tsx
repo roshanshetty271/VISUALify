@@ -3,6 +3,7 @@
 import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useCurrentTrack, useRecentTracks, useAudioFeatures, useIsPlaying } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { generateStars } from '@/lib/utils/seededRandom';
 import { beatClock, valenceColor } from '@/lib/utils/beatClock';
 
@@ -35,6 +36,8 @@ export function GalaxyMode() {
   const recentTracks = useRecentTracks();
   const audioFeatures = useAudioFeatures();
   const isPlaying = useIsPlaying();
+  const { orbitSpeed, glowIntensity } = useSettingsStore();
+
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const animationRef = useRef<number | null>(null);
   const lastFrameRef = useRef(performance.now());
@@ -146,7 +149,7 @@ export function GalaxyMode() {
     return nodes.map((node) => {
       if (node.isCurrent) return node;
 
-      const angle = node.angle + time * node.orbitSpeed;
+      const angle = node.angle + time * node.orbitSpeed * orbitSpeed;
       const x = centerX + Math.cos(angle) * node.orbitRadius;
       const y = centerY + Math.sin(angle) * node.orbitRadius * 0.6;
 
@@ -207,7 +210,7 @@ export function GalaxyMode() {
     >
       <defs>
         <filter id="sunGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation={8 + kick * 6} result="blur" />
+          <feGaussianBlur stdDeviation={(8 + kick * 6) * glowIntensity} result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -215,7 +218,7 @@ export function GalaxyMode() {
         </filter>
 
         <filter id="planetGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feGaussianBlur stdDeviation={3 * glowIntensity} result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />

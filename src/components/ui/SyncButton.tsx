@@ -9,7 +9,7 @@ interface SyncButtonProps {
 export function SyncButton({ onSync }: SyncButtonProps) {
   const isSyncing = useIsSyncing();
   const lastSyncTime = useLastSyncTime();
-  
+
   // Calculate time since last sync
   const getTimeSinceSync = () => {
     if (!lastSyncTime) return 'Never synced';
@@ -24,11 +24,10 @@ export function SyncButton({ onSync }: SyncButtonProps) {
     <button
       onClick={onSync}
       disabled={isSyncing}
-      className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-        isSyncing
-          ? 'bg-[#1DB954]/15 text-[#1DB954] cursor-wait'
+      className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${isSyncing
+          ? 'bg-[var(--theme-primary)]/15 text-[var(--theme-primary)] cursor-wait'
           : 'text-zinc-400 hover:text-white hover:bg-white/[0.1]'
-      }`}
+        }`}
       title={`Last sync: ${getTimeSinceSync()}`}
     >
       <svg

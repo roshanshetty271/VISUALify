@@ -33,7 +33,7 @@ export function StatsDashboard() {
   const { data: listeningTime, isLoading: timeLoading } = useListeningTime(token ?? '', period);
   const { data: audioProfile, isLoading: profileLoading } = useAudioProfile(token ?? '', period);
   const { data: musicPhases, isLoading: phasesLoading } = useMusicPhases(token ?? '', period);
-  
+
   // Show loading state while fetching token
   if (tokenLoading) {
     return (
@@ -70,10 +70,10 @@ export function StatsDashboard() {
       setSyncMessage('Not authenticated');
       return;
     }
-    
+
     setSyncing(true);
     setSyncMessage('Importing history...');
-    
+
     try {
       // Step 1: Sync recent history from Spotify
       const syncResponse = await fetch(`${API_URL}/api/stats/sync-history`, {
@@ -81,7 +81,7 @@ export function StatsDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const syncData = await syncResponse.json();
-      
+
       if (syncData.error) {
         setSyncMessage(`Error: ${syncData.error}`);
         setSyncing(false);
@@ -95,20 +95,20 @@ export function StatsDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const backfillData = await backfillResponse.json();
-      
+
       // Build success message
       const messages = [];
       if (syncData.imported > 0) messages.push(`${syncData.imported} new plays imported`);
       if (syncData.updated > 0) messages.push(`${syncData.updated} plays updated`);
       if (backfillData.tracks_updated > 0) messages.push(`${backfillData.tracks_updated} tracks got audio features`);
       if (backfillData.plays_updated > 0) messages.push(`${backfillData.plays_updated} plays got mood data`);
-      
+
       if (messages.length === 0) {
         setSyncMessage('Already up to date! All data synced.');
       } else {
         setSyncMessage(`✓ ${messages.join(', ')}`);
       }
-      
+
       // Invalidate all stats queries to refetch with new data
       queryClient.invalidateQueries({ queryKey: ['stats'] });
       queryClient.invalidateQueries({ queryKey: ['mood-journey'] });
@@ -131,7 +131,12 @@ export function StatsDashboard() {
           <button
             onClick={syncHistory}
             disabled={syncing}
-            className="px-4 py-2 bg-[#1DB954] text-black rounded-lg font-medium hover:bg-[#1ed760] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{
+              backgroundColor: syncing ? 'transparent' : 'var(--theme-primary)',
+              color: 'black',
+              boxShadow: syncing ? 'none' : '0 0 15px var(--theme-primary)'
+            }}
+            className="px-4 py-2 rounded-lg font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-black/10"
           >
             {syncing ? 'Syncing...' : 'Import History'}
           </button>

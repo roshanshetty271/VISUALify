@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import Matter from 'matter-js';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useThemeStore } from '@/stores/useThemeStore';
 import { beatClock } from '@/lib/utils/beatClock';
 import { fetchLyrics, type SyncedLine } from '@/lib/utils/lrclib';
 
@@ -41,8 +42,8 @@ export function LyricsMode() {
     for (const wall of wallsRef.current) {
       Matter.Composite.remove(engine.world, wall);
     }
-
     const t = 60;
+
     const walls = [
       Matter.Bodies.rectangle(w / 2, h + t / 2, w + t * 2, t, { isStatic: true }),
       Matter.Bodies.rectangle(-t / 2, h / 2, t, h + t * 2, { isStatic: true }),
@@ -90,14 +91,22 @@ export function LyricsMode() {
     if (!canvas || !engine) return;
 
     const mouse = Matter.Mouse.create(canvas);
+    // Prevent mouse wheel from interfering with scrolling on page
+    mouse.pixelRatio = 1;
+    // Don't limit mouse to canvas so we can drag lyrics over the NowPlaying block
+    Matter.Mouse.clearSourceEvents(mouse);
     const mc = Matter.MouseConstraint.create(engine, {
       mouse,
       constraint: {
         stiffness: 0.6,
         render: { visible: false },
       },
+      collisionFilter: {
+        category: 0x0001,
+        mask: 0xFFFFFFFF,
+        group: 0,
+      }
     });
-    mouse.pixelRatio = 1;
     Matter.Composite.add(engine.world, mc);
 
     const onMouseDown = (e: MouseEvent) => {
@@ -189,7 +198,8 @@ export function LyricsMode() {
       lastFrameRef.current = now;
 
       const store = usePlayerStore.getState();
-      const { animationSpeed } = useSettingsStore.getState();
+      const { animationSpeed, glowIntensity } = useSettingsStore.getState();
+      const theme = useThemeStore.getState().getTheme();
       const { audioFeatures, isPlaying, currentTrack, progress } = store;
 
       const dt = rawDt * animationSpeed;
@@ -226,12 +236,7 @@ export function LyricsMode() {
           currentTrack.albumName ?? '',
         ].filter(l => l.length > 0);
 
-        const recentLines = (store.recentTracks ?? [])
-          .slice(0, 5)
-          .map(t => `${t.name ?? ''} - ${t.artist ?? ''}`)
-          .filter(l => l.length > 3);
-
-        fallbackLinesRef.current = [...trackLines, ...recentLines];
+        fallbackLinesRef.current = trackLines;
         if (fallbackLinesRef.current.length === 0) {
           fallbackLinesRef.current = ['music', 'vibes', 'play'];
         }
@@ -275,7 +280,8 @@ export function LyricsMode() {
         if (line.trim().length > 0) {
           spawnLine(line, w, h, true);
         }
-      } else if (isNewBeat && fallbackLinesRef.current.length > 0 && beat % 3 === 0) {
+      } else if (isNewBeat && fallbackLinesRef.current.length > 0 && beat % 4 === 0) {
+        // Spawn current song info occasionally as fallback
         const line = fallbackLinesRef.current[fallbackIdxRef.current % fallbackLinesRef.current.length];
         fallbackIdxRef.current++;
         spawnLine(line, w, h, false);
@@ -331,8 +337,14 @@ export function LyricsMode() {
         ctx.translate(x, y);
         ctx.rotate(angle);
         ctx.font = meta.font;
-        ctx.fillStyle = `hsla(${meta.hue}, 20%, 92%, ${meta.alpha})`;
+        ctx.globalAlpha = meta.alpha;
+        ctx.fillStyle = theme.primary;
         ctx.fillText(meta.text, 0, 0);
+
+        ctx.globalAlpha = meta.alpha * 0.15 * glowIntensity;
+        ctx.fillStyle = theme.primary;
+        ctx.fill();
+
         ctx.restore();
       }
 

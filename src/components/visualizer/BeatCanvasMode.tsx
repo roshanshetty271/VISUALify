@@ -22,7 +22,6 @@ interface Splash {
 }
 
 const TWO_PI = Math.PI * 2;
-const MAX_SPLASHES = 200;
 
 const COLOR_PRESETS = [
   { id: 'auto', label: 'Auto', value: null },
@@ -152,7 +151,8 @@ export function BeatCanvasMode() {
     };
 
     splashesRef.current.push(splash);
-    if (splashesRef.current.length > MAX_SPLASHES) splashesRef.current.shift();
+    const { particleCount } = useSettingsStore.getState();
+    if (splashesRef.current.length > particleCount) splashesRef.current.shift();
     setCanSave(true);
   }, [getColor, getSizeMultiplier, clearBrandingOnce]);
 
@@ -560,86 +560,7 @@ export function BeatCanvasMode() {
       <canvas ref={persistRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       <canvas ref={canvasRef} className="w-full h-full cursor-crosshair relative z-[1]" />
 
-      {/* Toolbar */}
-      <div className="absolute top-20 right-4 z-10 flex flex-col gap-2.5">
-        {/* Brush style */}
-        <div className="flex flex-col gap-1 p-1.5 bg-white/[0.05] backdrop-blur-xl rounded-xl border border-white/[0.08]">
-          {(['splash', 'line', 'dots'] as BrushStyle[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setBrushStyle(s)}
-              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium tracking-wide transition-all duration-150 ${brushStyle === s
-                  ? 'bg-[#1DB954] text-black'
-                  : 'text-zinc-500 hover:text-white hover:bg-white/[0.08]'
-                }`}
-            >
-              {s === 'splash' ? 'Splash' : s === 'line' ? 'Line' : 'Dots'}
-            </button>
-          ))}
-        </div>
-
-        {/* Color palette */}
-        <div className="flex flex-col gap-1.5 p-1.5 bg-white/[0.05] backdrop-blur-xl rounded-xl border border-white/[0.08]">
-          <span className="text-[8px] text-white/20 uppercase tracking-widest text-center">Color</span>
-          <div className="grid grid-cols-2 gap-1">
-            {COLOR_PRESETS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setColorId(c.id)}
-                className={`w-6 h-6 rounded-md border transition-all duration-150 ${colorId === c.id
-                    ? 'border-white scale-110 shadow-[0_0_8px_rgba(255,255,255,0.3)]'
-                    : 'border-white/10 hover:border-white/30'
-                  }`}
-                style={{
-                  background: c.value
-                    ? `hsl(${c.value.h}, ${c.value.s}%, ${c.value.l}%)`
-                    : 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
-                }}
-                title={c.id === 'auto' ? 'Music-reactive' : c.id}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Brush size */}
-        <div className="flex gap-1 p-1.5 bg-white/[0.05] backdrop-blur-xl rounded-xl border border-white/[0.08]">
-          {[1, 2, 3].map((s) => (
-            <button
-              key={s}
-              onClick={() => setBrushSize(s)}
-              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-all duration-150 ${brushSize === s
-                  ? 'bg-white/15 text-white'
-                  : 'text-zinc-600 hover:text-white hover:bg-white/[0.06]'
-                }`}
-            >
-              <div
-                className="rounded-full bg-current"
-                style={{ width: s * 4 + 2, height: s * 4 + 2 }}
-              />
-            </button>
-          ))}
-        </div>
-
-        {/* Save/Clear */}
-        {canSave && (
-          <>
-            <button
-              onClick={handleSave}
-              className="px-3 py-2 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] text-[10px] text-white/50 hover:text-white hover:bg-white/[0.1] transition-all tracking-widest uppercase"
-            >
-              Save
-            </button>
-            <button
-              onClick={handleClear}
-              className="px-3 py-2 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] text-[10px] text-white/50 hover:text-white hover:bg-white/[0.1] transition-all tracking-widest uppercase"
-            >
-              Clear
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3 text-[10px] text-white/15 pointer-events-none select-none tracking-[0.2em] uppercase font-light">
+      {/* The toolbar has been removed per user request */}      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3 text-[10px] text-white/15 pointer-events-none select-none tracking-[0.2em] uppercase font-light">
         <span>Click to splash</span>
         <span className="w-px h-2.5 bg-white/10" />
         <span>Drag to paint</span>

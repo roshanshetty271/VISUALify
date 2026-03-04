@@ -9,7 +9,7 @@ export function VisualizerNav() {
       <Link href="/visualizer" className="pointer-events-auto">
         <span className="text-lg font-display font-bold">
           <span className="text-white">VISUAL</span>
-          <span className="text-[#1DB954]">ify</span>
+          <span className="text-[var(--theme-primary)]">ify</span>
         </span>
       </Link>
 

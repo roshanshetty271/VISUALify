@@ -58,7 +58,7 @@ export function AudioProfileRadar({ data, isLoading }: AudioProfileRadarProps) {
     const levels = 5;
     for (let i = 1; i <= levels; i++) {
       const levelRadius = (radius / levels) * i;
-      
+
       g.append('circle')
         .attr('r', levelRadius)
         .attr('fill', 'none')
@@ -111,10 +111,11 @@ export function AudioProfileRadar({ data, isLoading }: AudioProfileRadarProps) {
     g.append('path')
       .datum(features)
       .attr('d', radarLine)
-      .attr('fill', chartColors.primary)
-      .attr('fill-opacity', 0.3)
-      .attr('stroke', chartColors.primary)
-      .attr('stroke-width', 2);
+      .attr('fill', 'var(--theme-primary)')
+      .attr('fill-opacity', 0.25)
+      .attr('stroke', 'var(--theme-primary)')
+      .attr('stroke-width', 3)
+      .style('filter', 'drop-shadow(0 0 10px var(--theme-primary))');
 
     // Draw data points
     features.forEach((feature, i) => {
@@ -125,8 +126,10 @@ export function AudioProfileRadar({ data, isLoading }: AudioProfileRadarProps) {
       g.append('circle')
         .attr('cx', x)
         .attr('cy', y)
-        .attr('r', 4)
-        .attr('fill', chartColors.primary);
+        .attr('r', 5)
+        .attr('fill', 'var(--theme-primary)')
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 1.5);
     });
 
   }, [data]);

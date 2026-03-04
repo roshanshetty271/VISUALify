@@ -1,124 +1,66 @@
-# VISUALify
+# VISUALify 🎶
 
-Real-time Spotify music visualization. See your sound.
+**Real-time Spotify music visualization and deep listening analytics.** 
 
-![Next.js](https://img.shields.io/badge/Next.js-14-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![D3.js](https://img.shields.io/badge/D3.js-7-orange)
-![Tailwind](https://img.shields.io/badge/Tailwind-3-06B6D4)
+VISUALify transforms your Spotify playback into an immersive sensory experience. By combining real-time song data with advanced audio analysis, it creates a living bridge between your ears and your eyes, while providing deep insights into your musical journey.
 
 ---
 
-## Quick Start
+## 🎹 Immersive Visualizer Modes
 
-### 1. Install Dependencies
+Switch between three distinct, beat-reactive experiences:
 
-```bash
-npm install next-auth d3 zustand
-npm install -D @types/d3
-```
+### 1. Lyrics Mode
+**Real-time Synced Lyrics Playground**
+- Dynamic lyrics that fall and bounce in synchronization with your music.
+- Interactive physics: Watch as words react to the beat and "bounce" off the UI.
+- Full theme integration: Colors shift and flow to match your current vibe.
 
-### 2. Set Up Environment
+### 2. Canvas Mode
+**Beat-Reactive Abstract Art**
+- High-fidelity visualizers that paint dynamic, abstract patterns.
+    - **Galaxy**: A swirling cosmic field that expands and pulses with every kick drum.
+    - **Neural**: Digital synapses that fire and connect based on track energy.
+    - **Pulse**: Vibrant geometric forms that react in real-time to frequencies.
 
-Create `.env.local` in project root:
-
-```env
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-NEXTAUTH_SECRET=your_secret_here
-NEXTAUTH_URL=http://127.0.0.1:3000
-```
-
-Generate `NEXTAUTH_SECRET`:
-```bash
-openssl rand -base64 32
-```
-
-### 3. Spotify Dashboard
-
-Add redirect URI in [Spotify Developer Dashboard](https://developer.spotify.com/dashboard):
-```
-http://127.0.0.1:3000/api/auth/callback/spotify
-```
-
-### 4. Run
-
-```bash
-npm run dev
-```
-
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000)
+### 3. Piano Mode
+**Interactive Full-Screen Keyboard**
+- A playable, 2-octave piano that takes center stage.
+- **Sound Synthesis**: Built-in Web Audio API synthesizer lets you play along with the track.
+- **Visual Feedback**: Keys react visually to the music's energy and your manual interactions.
 
 ---
 
-## Project Structure
+## 📊 Deep Listening Analytics
 
-```
-src/
-├── app/
-│   ├── api/auth/[...nextauth]/route.ts  # Auth handler
-│   ├── (main)/visualizer/page.tsx       # Main visualization
-│   ├── layout.tsx                       # Root layout
-│   └── page.tsx                         # Landing page
-├── components/
-│   ├── auth/                            # Login/Logout buttons
-│   ├── ui/                              # Shared UI components
-│   └── visualizer/                      # Visualization modes
-├── hooks/
-│   ├── useNowPlaying.ts                 # Spotify polling
-│   ├── useAudioFeatures.ts              # Track features
-│   └── useBPM.ts                        # Tempo sync
-├── lib/
-│   └── spotify/                         # API client
-├── stores/
-│   └── usePlayerStore.ts                # Zustand state
-└── types/
-    └── spotify.ts                       # TypeScript types
-```
+Beyond the visuals, VISUALify provides a masterclass in self-discovery through your data.
+
+### 📈 Stats Dashboard
+- **Total Analytics**: Track your total plays, unique artists, and total listening minutes.
+- **Audio Profile**: Visualize your musical taste with a radar chart mapping metrics like Energy, Valence (Happiness), and Acousticness.
+- **Music Phases**: Discover how your listening patterns evolve throughout the week.
+- **Spotify Sync**: One-click history import ensures your dashboard is always reflecting your latest sessions.
 
 ---
 
-## Features
+## 🛠️ Tech Stack
 
-- **Real-time sync** with Spotify playback
-- **3 interactive modes**: Canvas (beat-reactive painting), Lyrics (physics-based lyrics playground), Strings (playable instrument with Guitar/Pentatonic/Blues scales)
-- **BPM-synced animations** powered by a shared BeatClock using D3 easing curves
-- **Audio feature mapping**: energy, valence, and tempo drive colors, sizes, and speeds via D3 scales
-- **Rate limit handling** with graceful backoff
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 14 (App Router) |
-| Language | TypeScript (strict) |
-| Visualization | D3.js (d3-ease, d3-scale, d3-interpolate) + Canvas 2D |
-| Styling | Tailwind CSS |
-| State | Zustand |
-| Auth | NextAuth.js |
-| Hosting | Vercel |
+- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **Visualization**: D3.js, Canvas 2D API, Web Audio API
+- **State Management**: Zustand, React Query
+- **Authentication**: NextAuth.js (Spotify Provider)
+- **Backend**: FastAPI (Python) for heavy data processing and mood analysis
 
 ---
 
+## 🚀 Quick Start
 
-## Deployment
-
-1. Push to GitHub
-2. Import in [Vercel](https://vercel.com)
-3. Add environment variables
-4. Add production redirect URI to Spotify:
-   ```
-   https://your-domain.vercel.app/api/auth/callback/spotify
-   ```
+1. **Clone the repo** and run `npm install`.
+2. **Set up your `.env.local`** with your Spotify Developer credentials (`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`).
+3. **Configure Redirect URIs** in the Spotify Dashboard: `http://localhost:3000/api/auth/callback/spotify`.
+4. **Run development server**: `npm run dev`.
+5. **Start the backend**: `uvicorn app.main:app --reload` from the `backend/` directory.
 
 ---
 
-## License
-
-MIT
-
----
-
-Built by Roshan Shetty.
+Built by Roshan Shetty. Licensed under MIT.

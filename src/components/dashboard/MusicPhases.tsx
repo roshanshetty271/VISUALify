@@ -35,7 +35,7 @@ export function MusicPhases({ phases, isLoading }: MusicPhasesProps) {
         <div className="text-center py-8">
           <p className="text-zinc-500 mb-2">Not enough data with audio features</p>
           <p className="text-sm text-zinc-600">
-            Click <span className="text-[#1DB954] font-medium">&quot;Import History&quot;</span> above to fetch mood data from Spotify
+            Click <span className="font-bold" style={{ color: 'var(--theme-primary)' }}>&quot;Import History&quot;</span> above to fetch mood data from Spotify
           </p>
         </div>
       </div>

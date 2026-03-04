@@ -81,8 +81,9 @@ export function ListeningTimeChart({ data, isLoading }: ListeningTimeChartProps)
       .attr('y', (d) => yScale(d.minutes))
       .attr('width', xScale.bandwidth())
       .attr('height', (d) => innerHeight - yScale(d.minutes))
-      .attr('fill', chartColors.primary)
-      .attr('opacity', 0.8)
+      .attr('fill', 'var(--theme-primary)')
+      .attr('opacity', 0.85)
+      .style('filter', 'drop-shadow(0 0 6px var(--theme-primary))')
       .on('mouseenter', function () {
         select(this).attr('opacity', 1);
       })
