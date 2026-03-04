@@ -7,14 +7,14 @@ import {
   useStatsSummary,
   useListeningTime,
   useAudioProfile,
-  useMusicPhases,
+
 } from '@/hooks/useStats';
 import { useBackendToken } from '@/hooks/useBackendToken';
 import { StatCard } from './StatCard';
 import { PeriodSelector } from './PeriodSelector';
 import { ListeningTimeChart } from './ListeningTimeChart';
 import { AudioProfileRadar } from './AudioProfileRadar';
-import { MusicPhases } from './MusicPhases';
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -32,7 +32,7 @@ export function StatsDashboard() {
   const { data: summary, isLoading: summaryLoading } = useStatsSummary(token ?? '', period);
   const { data: listeningTime, isLoading: timeLoading } = useListeningTime(token ?? '', period);
   const { data: audioProfile, isLoading: profileLoading } = useAudioProfile(token ?? '', period);
-  const { data: musicPhases, isLoading: phasesLoading } = useMusicPhases(token ?? '', period);
+
 
   // Show loading state while fetching token
   if (tokenLoading) {
@@ -195,8 +195,7 @@ export function StatsDashboard() {
         </div>
       </div>
 
-      {/* Music Phases */}
-      <MusicPhases phases={musicPhases ?? []} isLoading={phasesLoading} />
+
     </div>
   );
 }

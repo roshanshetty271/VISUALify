@@ -8,7 +8,8 @@ import { normalizeTrack } from '@/types';
 
 export function useRecentTracks() {
   const { data: session } = useSession();
-  const { setRecentTracks, currentTrack } = usePlayerStore();
+  const currentTrackId = usePlayerStore(s => s.currentTrack?.id);
+  const actions = usePlayerStore.getState();
 
   useEffect(() => {
     if (!session?.accessToken) return;
@@ -21,7 +22,7 @@ export function useRecentTracks() {
           const tracks = data.items
             .map((item) => normalizeTrack(item.track, item.played_at))
             .filter((track, index, arr) => arr.findIndex((t) => t.id === track.id) === index);
-          setRecentTracks(tracks);
+          actions.setRecentTracks(tracks);
         }
       } catch (err) {
         console.error('Failed to fetch recent tracks:', err);
@@ -33,6 +34,6 @@ export function useRecentTracks() {
     const interval = setInterval(fetchRecent, 30 * 1000);
 
     return () => clearInterval(interval);
-  }, [session?.accessToken, currentTrack?.id, setRecentTracks]);
+  }, [session?.accessToken, currentTrackId, actions.setRecentTracks]);
 }
 
