@@ -41,36 +41,7 @@ function Slider({ label, value, min, max, step, onChange, unit = '' }: SliderPro
   );
 }
 
-interface ToggleProps {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-function Toggle({ label, checked, onChange }: ToggleProps) {
-  return (
-    <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-sm text-gray-400 group-hover:text-white transition-colors">
-        {label}
-      </span>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`
-          relative w-11 h-6 rounded-full transition-colors duration-200
-          ${checked ? 'bg-[var(--theme-primary)]' : 'bg-white/20'}
-        `}
-      >
-        <span
-          className={`
-            absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-md
-            transition-transform duration-200
-            ${checked ? 'translate-x-5' : 'translate-x-0'}
-          `}
-        />
-      </button>
-    </label>
-  );
-}
+// Toggle component removed as it was defined but never used in SettingsPanel
 
 export function SettingsPanel() {
   const {

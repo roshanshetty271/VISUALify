@@ -13,8 +13,6 @@ import { NowPlaying } from './NowPlaying';
 import { ModeSelector, VisualizationMode } from './ModeSelector';
 import { PlaylistQueue, QueueButton } from './PlaylistQueue';
 import { LoadingSpinner } from '@/components/ui';
-import { SettingsPanel } from '@/components/ui/SettingsPanel';
-import { SettingsButton } from '@/components/ui/SettingsButton';
 import { FullscreenButton } from '@/components/ui/FullscreenButton';
 import { SyncButton } from '@/components/ui/SyncButton';
 import { DevicePicker } from '@/components/ui/DevicePicker';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { interpolateHsl } from 'd3-interpolate';
 import { color as d3color } from 'd3-color';
@@ -43,10 +43,10 @@ export function PulseMode() {
   const tempo = audioFeatures?.tempo ?? 120;
   const valence = audioFeatures?.valence ?? 0.5;
 
-  const ringThickness = scaleLinear().domain([0, 1]).range([1.5, 5]).clamp(true);
-  const ringBrightness = scaleLinear().domain([0, 1]).range([0.3, 0.9]).clamp(true);
-  const ringSpeed = scaleLinear().domain([0, 1]).range([1.5, 4]).clamp(true);
-  const colorBlend = (v: number) => interpolateHsl('#3b82f6', '#fbbf24')(v);
+  const ringThickness = useMemo(() => scaleLinear().domain([0, 1]).range([1.5, 5]).clamp(true), []);
+  const ringBrightness = useMemo(() => scaleLinear().domain([0, 1]).range([0.3, 0.9]).clamp(true), []);
+  const ringSpeed = useMemo(() => scaleLinear().domain([0, 1]).range([1.5, 4]).clamp(true), []);
+  const colorBlend = useCallback((v: number) => interpolateHsl('#3b82f6', '#fbbf24')(v), []);
 
   useEffect(() => {
     const update = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useThemeStore } from '@/stores/useThemeStore';
@@ -11,37 +11,12 @@ const OCTAVES = 2;
 const START_NOTE = 48; // C3
 const KEY_COUNT = OCTAVES * 12 + 1; // 25 keys for 2 octaves (C3 to C5)
 const WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11]; // Indices in an octave
-const KEY_WIDTH_RATIO = 1 / 15; // Width relative to canvas
 const FALL_SPEED_BASE = 0.3;
 
 // Helpers
 const isBlackKey = (idx: number) => !WHITE_KEYS.includes(idx % 12);
 const getNoteFreq = (idx: number) => 440 * Math.pow(2, (idx + START_NOTE - 69) / 12);
 const WHITE_KEY_COUNT = Array.from({ length: KEY_COUNT }, (_, i) => i).filter(idx => !isBlackKey(idx)).length;
-
-// Simple hex color mixer for Canvas compatibility
-const mixHex = (hex1: string, hex2: string, weight: number) => {
-    try {
-        const d2h = (d: number) => d.toString(16).padStart(2, '0');
-        const h2d = (h: string) => parseInt(h, 16);
-
-        const r1 = h2d(hex1.substring(1, 3));
-        const g1 = h2d(hex1.substring(3, 5));
-        const b1 = h2d(hex1.substring(5, 7));
-
-        const r2 = h2d(hex2.substring(1, 3));
-        const g2 = h2d(hex2.substring(3, 5));
-        const b2 = h2d(hex2.substring(5, 7));
-
-        const r = Math.floor(r1 * weight + r2 * (1 - weight));
-        const g = Math.floor(g1 * weight + g2 * (1 - weight));
-        const b = Math.floor(b1 * weight + b2 * (1 - weight));
-
-        return `#${d2h(r)}${d2h(g)}${d2h(b)}`;
-    } catch (e) {
-        return hex1;
-    }
-};
 
 interface PianoNote {
     id: string;
@@ -67,12 +42,10 @@ export function PianoMode() {
     const lastFrameRef = useRef(performance.now());
     const lastBeatRef = useRef(-1);
 
-    const [hoverKey, setHoverKey] = useState<number | null>(null);
-
     // Audio Context Management
     const audioCtxRef = useRef<AudioContext | null>(null);
 
-    const getAudioCtx = () => {
+    const getAudioCtx = useCallback(() => {
         if (!audioCtxRef.current) {
             audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
@@ -80,9 +53,9 @@ export function PianoMode() {
             audioCtxRef.current.resume();
         }
         return audioCtxRef.current;
-    };
+    }, []);
 
-    const playNote = (index: number, intensity: number) => {
+    const playNote = useCallback((index: number, intensity: number) => {
         try {
             const ctx = getAudioCtx();
             const freq = getNoteFreq(index);
@@ -101,7 +74,7 @@ export function PianoMode() {
             osc2.type = 'sine';
             osc2.frequency.setValueAtTime(freq / 2, now);
 
-            const vol = 0.4 * intensity; // Increased from 0.1 for "loud" play
+            const vol = 0.4 * intensity; // Increased for "loud" play
             gain.gain.setValueAtTime(0, now);
             gain.gain.linearRampToValueAtTime(vol, now + 0.01);
             gain.gain.exponentialRampToValueAtTime(vol * 0.1, now + 0.5);
@@ -120,23 +93,10 @@ export function PianoMode() {
             osc2.start(now);
             osc.stop(now + 1.3);
             osc2.stop(now + 1.3);
-        } catch (e) {
-            console.warn('Audio play failed', e);
+        } catch {
+            console.warn('Audio play failed');
         }
-    };
-
-    const spawnNote = useCallback((keyIndex: number, intensity: number, themeColor: string) => {
-        const id = Math.random().toString(36).substring(7);
-        notesRef.current.push({
-            id,
-            keyIndex,
-            y: -50,
-            height: 20 + intensity * 80,
-            velocity: FALL_SPEED_BASE + (Math.random() * 0.2),
-            opacity: 0.8,
-            color: themeColor,
-        });
-    }, []);
+    }, [getAudioCtx]);
 
     const triggerKey = useCallback((index: number, intensity: number, withSound = false) => {
         activeKeysRef.current.set(index, {
@@ -148,7 +108,7 @@ export function PianoMode() {
         if (withSound) {
             playNote(index, intensity);
         }
-    }, []);
+    }, [playNote]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -178,7 +138,7 @@ export function PianoMode() {
             lastFrameRef.current = now;
 
             const { audioFeatures, isPlaying } = usePlayerStore.getState();
-            const { animationSpeed, glowIntensity } = useSettingsStore.getState();
+            const { animationSpeed } = useSettingsStore.getState();
             const theme = useThemeStore.getState().getTheme();
 
             const dt = rawDt * animationSpeed;
@@ -191,9 +151,7 @@ export function PianoMode() {
                 return;
             }
 
-            const energy = audioFeatures?.energy || 0.5;
             const tempo = audioFeatures?.tempo || 120;
-            const kick = beatClock.kick(tempo);
             const beat = beatClock.beatIndex(tempo);
 
             // Automatic note spawning removed as per user request
@@ -238,7 +196,6 @@ export function PianoMode() {
             ctx.fillRect(0, 0, w, h);
 
             // Falling notes rendering removed as per user request
-
             ctx.globalAlpha = 1;
             ctx.globalCompositeOperation = 'source-over';
 
@@ -253,10 +210,6 @@ export function PianoMode() {
             whiteKeysOnly.forEach((idx, wkIdx) => {
                 const x = wkIdx * whiteKeyWidth;
                 const active = activeKeysRef.current.get(idx);
-
-                // Pure white for base, theme color for active
-                const baseColor = '#ffffff';
-                const activeColor = theme.primary;
 
                 // Subtle gradient for 3D effect
                 const keyGrad = ctx.createLinearGradient(x, keyboardTop, x, h);
@@ -333,7 +286,7 @@ export function PianoMode() {
 
         animRef.current = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(animRef.current);
-    }, []);
+    }, [triggerKey]);
 
     const handlePointerDown = (e: React.PointerEvent) => {
         const canvas = canvasRef.current;

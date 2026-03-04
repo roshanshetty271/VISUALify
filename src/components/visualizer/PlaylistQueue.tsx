@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useCurrentTrack, useRecentTracks } from '@/stores';
 
 interface QueuePanelProps {
@@ -23,13 +24,13 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Panel */}
-      <div 
+      <div
         className="fixed left-0 top-0 h-full w-80 bg-[#0f0f18]/95 backdrop-blur-xl 
                    border-r border-white/10 z-50 overflow-y-auto
                    animate-in slide-in-from-left duration-300"
@@ -57,16 +58,17 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
             <div className="flex items-center gap-3">
               {currentTrack.albumArt && !failedImages[currentTrack.albumArt] ? (
                 <div className="relative w-14 h-14 flex-shrink-0">
-                  <img
+                  <Image
                     src={currentTrack.albumArt}
-                    alt={currentTrack.albumName}
-                    className="rounded-lg object-cover w-14 h-14"
+                    alt={currentTrack.albumName || 'Album Art'}
+                    width={56}
+                    height={56}
+                    className="rounded-lg object-cover"
                     loading="lazy"
-                    referrerPolicy="no-referrer"
                     onError={() => {
                       setFailedImages((prev) => ({
                         ...prev,
-                        [currentTrack.albumArt]: true,
+                        [currentTrack.albumArt!]: true,
                       }));
                     }}
                   />
@@ -104,7 +106,7 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Recently Played</p>
           <div className="space-y-2">
             {dedupedRecentTracks.slice(0, 15).map((track, index) => (
-              <div 
+              <div
                 key={`${track.id}-${index}`}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
               >
@@ -113,16 +115,17 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
                 </span>
                 {track.albumArt && !failedImages[track.albumArt] ? (
                   <div className="relative w-10 h-10 flex-shrink-0">
-                    <img
+                    <Image
                       src={track.albumArt}
-                      alt={track.albumName}
-                      className="rounded object-cover w-10 h-10"
+                      alt={track.albumName || 'Album Art'}
+                      width={40}
+                      height={40}
+                      className="rounded object-cover"
                       loading="lazy"
-                      referrerPolicy="no-referrer"
                       onError={() => {
                         setFailedImages((prev) => ({
                           ...prev,
-                          [track.albumArt]: true,
+                          [track.albumArt!]: true,
                         }));
                       }}
                     />
