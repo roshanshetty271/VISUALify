@@ -155,7 +155,6 @@ export function BeatCanvasMode() {
     splashesRef.current.push(splash);
     const { particleCount } = useSettingsStore.getState();
     if (splashesRef.current.length > particleCount) splashesRef.current.shift();
-    setCanSave(true);
   }, [getColor, getSizeMultiplier, clearBrandingOnce]);
 
   const drawLineSegment = useCallback((x1: number, y1: number, x2: number, y2: number) => {
@@ -213,7 +212,6 @@ export function BeatCanvasMode() {
     pCtx.stroke();
 
     pCtx.globalCompositeOperation = 'source-over';
-    setCanSave(true);
   }, [getColor, getSizeMultiplier, clearBrandingOnce]);
 
   const drawDot = useCallback((x: number, y: number) => {
@@ -256,7 +254,6 @@ export function BeatCanvasMode() {
     pCtx.fill();
 
     pCtx.globalCompositeOperation = 'source-over';
-    setCanSave(true);
   }, [getColor, getSizeMultiplier, clearBrandingOnce]);
 
   useEffect(() => {
