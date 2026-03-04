@@ -11,7 +11,6 @@ const OCTAVES = 2;
 const START_NOTE = 48; // C3
 const KEY_COUNT = OCTAVES * 12 + 1; // 25 keys for 2 octaves (C3 to C5)
 const WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11]; // Indices in an octave
-const FALL_SPEED_BASE = 0.3;
 
 // Helpers
 const isBlackKey = (idx: number) => !WHITE_KEYS.includes(idx % 12);
@@ -47,7 +46,8 @@ export function PianoMode() {
 
     const getAudioCtx = useCallback(() => {
         if (!audioCtxRef.current) {
-            audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            audioCtxRef.current = new (window.AudioContext || (window as unknown as Record<string, any>).webkitAudioContext)();
         }
         if (audioCtxRef.current.state === 'suspended') {
             audioCtxRef.current.resume();

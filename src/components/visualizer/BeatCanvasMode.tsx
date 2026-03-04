@@ -51,13 +51,15 @@ export function BeatCanvasMode() {
   const lastBeatRef = useRef(-1);
   const brushRef = useRef({ active: false, x: 0, y: 0 });
   const prevPointsRef = useRef<{ x: number; y: number }[]>([]);
-  const [canSave, setCanSave] = useState(false);
   const brandingDrawnRef = useRef(false);
   const hasInteractedRef = useRef(false);
 
-  const [brushStyle, setBrushStyle] = useState<BrushStyle>('splash');
-  const [colorId, setColorId] = useState('auto');
-  const [brushSize, setBrushSize] = useState(2); // 1=S, 2=M, 3=L
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [brushStyle] = useState<BrushStyle>('splash');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [colorId] = useState('auto');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [brushSize] = useState(2); // 1=S, 2=M, 3=L
 
   const brushStyleRef = useRef<BrushStyle>('splash');
   const colorIdRef = useRef('auto');
@@ -506,52 +508,7 @@ export function BeatCanvasMode() {
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
-  const handleSave = useCallback(() => {
-    const canvas = canvasRef.current;
-    const persist = persistRef.current;
-    if (!canvas || !persist) return;
-    const exp = document.createElement('canvas');
-    exp.width = canvas.width;
-    exp.height = canvas.height;
-    const eCtx = exp.getContext('2d');
-    if (!eCtx) return;
-    eCtx.fillStyle = '#06060c';
-    eCtx.fillRect(0, 0, exp.width, exp.height);
-    eCtx.drawImage(persist, 0, 0);
-    eCtx.drawImage(canvas, 0, 0);
-    const link = document.createElement('a');
-    link.download = `visualify-canvas-${Date.now()}.png`;
-    link.href = exp.toDataURL('image/png');
-    link.click();
-  }, []);
-
-  const handleClear = useCallback(() => {
-    const persist = persistRef.current;
-    const pCtx = persist?.getContext('2d');
-    if (persist && pCtx) pCtx.clearRect(0, 0, persist.width, persist.height);
-    splashesRef.current = [];
-    setCanSave(false);
-    brandingDrawnRef.current = false;
-    // Redraw branding
-    if (persist) {
-      const cx = persist.width / 2;
-      const cy = persist.height / 2;
-      const pc = persist.getContext('2d');
-      if (pc) {
-        pc.save();
-        pc.textAlign = 'center';
-        pc.textBaseline = 'middle';
-        pc.font = '800 120px "Inter", system-ui, sans-serif';
-        pc.fillStyle = 'rgba(255, 255, 255, 0.04)';
-        pc.fillText('VISUALify', cx, cy - 20);
-        pc.font = '400 18px "Inter", system-ui, sans-serif';
-        pc.fillStyle = 'rgba(255, 255, 255, 0.03)';
-        pc.fillText('tap anywhere to paint', cx, cy + 50);
-        pc.restore();
-        brandingDrawnRef.current = true;
-      }
-    }
-  }, []);
+  // handleSave and handleClear removed — not wired to any UI element
 
 
 

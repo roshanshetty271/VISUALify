@@ -98,7 +98,7 @@ export function GalaxyMode() {
     []
   );
 
-  const orbitRadii = [100, 145, 190, 235, 280, 325, 370, 415];
+  const orbitRadii = useMemo(() => [100, 145, 190, 235, 280, 325, 370, 415], []);
 
   const nodes: Node[] = useMemo(() => {
     const result: Node[] = [];
@@ -164,7 +164,7 @@ export function GalaxyMode() {
 
       return { ...node, x, y, trail };
     });
-  }, [nodes, centerX, centerY]);
+  }, [nodes, centerX, centerY, orbitSpeed]);
 
   const time = beatClock.now;
 
