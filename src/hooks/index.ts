@@ -6,3 +6,4 @@ export { useFullscreen } from './useFullscreen';
 export { usePlaybackControls } from './usePlaybackControls';
 export { useDevices } from './useDevices';
 export { useBackendToken } from './useBackendToken';
+export { useLyrics } from './useLyrics';

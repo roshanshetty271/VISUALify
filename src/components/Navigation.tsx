@@ -14,7 +14,6 @@ export function Navigation() {
   const links = [
     { href: '/visualizer', label: 'Visualizer' },
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/mood-journey', label: 'Mood Journey' },
   ];
 
   return (

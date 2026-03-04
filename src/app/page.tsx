@@ -6,9 +6,9 @@ import { signIn, useSession } from 'next-auth/react';
 import { LoginButton } from '@/components/auth';
 
 const MODES = [
-  { name: 'Pulse', desc: 'Beat-reactive rings that explode from the center', color: '#1DB954' },
-  { name: 'Orbit', desc: 'Tracks orbit a pulsing sun in deep space', color: '#3B82F6' },
-  { name: 'Particles', desc: 'Swarm of points that scatter on every beat', color: '#8B5CF6' },
+  { name: 'Canvas', desc: 'Paint to the beat — your clicks and drags create splashes that pulse with the music', color: '#1DB954' },
+  { name: 'Lyrics', desc: 'Song lyrics drop in as physics objects you can throw, stack, and play with', color: '#3B82F6' },
+  { name: 'Strings', desc: 'Pluck and strum strings that play real notes — pick Guitar, Pentatonic, or Blues scales', color: '#8B5CF6' },
 ];
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -98,7 +98,7 @@ function HomeContent() {
       <section className="py-28 px-6 bg-zinc-50">
         <div className="max-w-5xl mx-auto">
           <p className="text-[11px] text-zinc-400 uppercase tracking-[0.2em] mb-16">
-            Three visualization modes
+            Three interactive modes
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-14">

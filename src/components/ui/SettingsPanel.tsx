@@ -186,38 +186,12 @@ export function SettingsPanel() {
             />
 
             <Slider
-              label="Orbit Speed"
-              value={orbitSpeed}
-              min={0.5}
-              max={2}
-              step={0.1}
-              onChange={setOrbitSpeed}
-              unit="x"
-            />
-
-            <Slider
               label="Glow Intensity"
               value={glowIntensity}
               min={0}
               max={1}
               step={0.1}
               onChange={setGlowIntensity}
-            />
-          </section>
-
-          <hr className="border-white/10" />
-
-          {/* Particles */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Particles</h3>
-            
-            <Slider
-              label="Particle Count"
-              value={particleCount}
-              min={50}
-              max={200}
-              step={10}
-              onChange={setParticleCount}
             />
           </section>
 

@@ -50,7 +50,7 @@ export function PulseMode() {
 
   useEffect(() => {
     const update = () => {
-      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+      setDimensions({ width: window.innerWidth, height: window.innerHeight - 200 });
     };
     update();
     window.addEventListener('resize', update);

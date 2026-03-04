@@ -20,12 +20,6 @@ export function VisualizerNav() {
         >
           Dashboard
         </Link>
-        <Link
-          href="/mood-journey"
-          className="px-2.5 py-1 rounded text-xs text-zinc-400 hover:text-white transition-colors"
-        >
-          Mood
-        </Link>
         <div className="w-px h-3.5 bg-zinc-700 mx-1" />
         <button
           onClick={() => signOut({ callbackUrl: '/' })}

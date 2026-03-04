@@ -6,9 +6,9 @@ import { signOut } from 'next-auth/react';
 import { useNowPlaying, useRecentTracks, useBPM } from '@/hooks';
 import { useIsLoading, useCurrentTrack } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
-import { PulseMode } from './PulseMode';
-import { GalaxyMode } from './GalaxyMode';
-import { ParticlesMode } from './ParticlesMode';
+import { BeatCanvasMode } from './BeatCanvasMode';
+import { LyricsMode } from './LyricsMode';
+import { StringMode } from './StringMode';
 import { NowPlaying } from './NowPlaying';
 import { ModeSelector, VisualizationMode } from './ModeSelector';
 import { PlaylistQueue, QueueButton } from './PlaylistQueue';
@@ -20,7 +20,7 @@ import { SyncButton } from '@/components/ui/SyncButton';
 import { DevicePicker } from '@/components/ui/DevicePicker';
 
 export function VisualizerContainer() {
-  const [mode, setMode] = useState<VisualizationMode>('pulse');
+  const [mode, setMode] = useState<VisualizationMode>('lyrics');
   const [queueOpen, setQueueOpen] = useState(false);
 
   const { forceSync } = useNowPlaying();
@@ -48,14 +48,14 @@ export function VisualizerContainer() {
 
   const renderVisualization = () => {
     switch (mode) {
-      case 'pulse':
-        return <PulseMode />;
-      case 'orbit':
-        return <GalaxyMode />;
-      case 'particles':
-        return <ParticlesMode />;
+      case 'canvas':
+        return <BeatCanvasMode />;
+      case 'lyrics':
+        return <LyricsMode />;
+      case 'strings':
+        return <StringMode />;
       default:
-        return <PulseMode />;
+        return <LyricsMode />;
     }
   };
 
@@ -63,7 +63,7 @@ export function VisualizerContainer() {
     <div className="flex flex-col h-screen bg-[var(--theme-bg-start)]">
       {/* ─── Unified Toolbar ─── */}
       <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
-        <div className="flex items-center justify-between px-4 py-3 mx-3 mt-3 bg-black/60 backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl pointer-events-auto">
+        <div className="flex items-center justify-between px-4 py-2.5 mx-3 mt-3 bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
           {/* Left: Queue + Logo + Nav */}
           <div className="flex items-center gap-2">
             <QueueButton onClick={() => setQueueOpen(true)} />
@@ -120,26 +120,25 @@ export function VisualizerContainer() {
       </div>
 
       {/* ─── Visualization Area ─── */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-0 overflow-hidden">
         {renderVisualization()}
       </div>
 
-      {/* ─── Idle Overlay (when no track playing) ─── */}
+      {/* ─── Idle Prompt (when no track playing) ─── */}
       {!currentTrack && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
-          <div className="text-center px-10 py-10 rounded-2xl bg-black/50 backdrop-blur-xl border border-white/[0.08]">
-            <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center">
-              <svg className="w-7 h-7 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 pointer-events-auto animate-[fadeInUp_0.6s_ease-out]">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-full bg-white/[0.06] backdrop-blur-2xl border border-white/[0.1] shadow-[0_0_40px_rgba(29,185,84,0.08)]">
+            <div className="w-8 h-8 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
               </svg>
             </div>
-            <p className="text-white text-base font-semibold mb-1">Play something on Spotify</p>
-            <p className="text-zinc-400 text-sm">The visualization will react in real-time</p>
+            <span className="text-white/70 text-sm">Play something on Spotify</span>
             <button
               onClick={forceSync}
-              className="mt-5 px-5 py-2 rounded-lg bg-[#1DB954] text-black text-sm font-semibold hover:bg-[#1ed760] transition-colors"
+              className="px-4 py-1.5 rounded-full bg-[#1DB954] text-black text-xs font-semibold hover:bg-[#1ed760] transition-colors ml-1"
             >
-              Sync now
+              Sync
             </button>
           </div>
         </div>

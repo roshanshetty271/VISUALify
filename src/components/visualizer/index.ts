@@ -1,6 +1,6 @@
-export { PulseMode } from './PulseMode';
-export { GalaxyMode } from './GalaxyMode';
-export { ParticlesMode } from './ParticlesMode';
+export { BeatCanvasMode } from './BeatCanvasMode';
+export { LyricsMode } from './LyricsMode';
+export { StringMode } from './StringMode';
 export { NowPlaying } from './NowPlaying';
 export { ProgressBar } from './ProgressBar';
 export { ModeSelector } from './ModeSelector';

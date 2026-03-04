@@ -81,7 +81,7 @@ src/
 ## Features
 
 - **Real-time sync** with Spotify playback
-- **3 visualization modes**: Pulse, Orbit, Particles — each beat-reactive with exponential decay
+- **3 interactive modes**: Canvas (beat-reactive painting), Lyrics (physics-based lyrics playground), Strings (playable instrument with Guitar/Pentatonic/Blues scales)
 - **BPM-synced animations** powered by a shared BeatClock using D3 easing curves
 - **Audio feature mapping**: energy, valence, and tempo drive colors, sizes, and speeds via D3 scales
 - **Rate limit handling** with graceful backoff

@@ -274,20 +274,17 @@ async def get_audio_profile(
 
     period_start = get_period_start(period)
     
-    # Get plays with audio features
-    query = select(Play).where(
-        and_(
-            Play.user_id == user.id,
-            Play.energy.isnot(None),
-        )
+    # Get plays joined with tracks to fall back to track-level features
+    query = select(Play, Track).join(Track, Play.track_id == Track.id).where(
+        Play.user_id == user.id,
     )
     if period_start:
         query = query.where(Play.started_at >= period_start)
     
     result = await db.execute(query)
-    plays = result.scalars().all()
+    rows = result.all()
     
-    if not plays:
+    if not rows:
         return {
             "energy": 0.5,
             "valence": 0.5,
@@ -296,43 +293,35 @@ async def get_audio_profile(
             "instrumentalness": 0.5,
         }
     
-    # Get track details for additional features
-    track_ids = list(set(play.track_id for play in plays))
-    tracks_result = await db.execute(
-        select(Track).where(Track.id.in_(track_ids))
-    )
-    tracks = {track.id: track for track in tracks_result.scalars().all()}
+    energy_vals: list[float] = []
+    valence_vals: list[float] = []
+    danceability_vals: list[float] = []
+    acousticness_vals: list[float] = []
+    instrumentalness_vals: list[float] = []
     
-    # Calculate averages
-    energy_sum = sum(float(play.energy) for play in plays if play.energy)
-    valence_sum = sum(float(play.valence) for play in plays if play.valence)
+    for play, track in rows:
+        e = play.energy if play.energy is not None else track.energy
+        v = play.valence if play.valence is not None else track.valence
+        if e is not None:
+            energy_vals.append(float(e))
+        if v is not None:
+            valence_vals.append(float(v))
+        if track.danceability is not None:
+            danceability_vals.append(float(track.danceability))
+        if track.acousticness is not None:
+            acousticness_vals.append(float(track.acousticness))
+        if track.instrumentalness is not None:
+            instrumentalness_vals.append(float(track.instrumentalness))
     
-    # Get from tracks
-    danceability_values = [
-        float(tracks[play.track_id].danceability)
-        for play in plays
-        if play.track_id in tracks and tracks[play.track_id].danceability
-    ]
-    acousticness_values = [
-        float(tracks[play.track_id].acousticness)
-        for play in plays
-        if play.track_id in tracks and tracks[play.track_id].acousticness
-    ]
-    instrumentalness_values = [
-        float(tracks[play.track_id].instrumentalness)
-        for play in plays
-        if play.track_id in tracks and tracks[play.track_id].instrumentalness
-    ]
-    
-    result = {
-        "energy": round(energy_sum / len(plays), 3),
-        "valence": round(valence_sum / len(plays), 3),
-        "danceability": round(sum(danceability_values) / len(danceability_values), 3) if danceability_values else 0.5,
-        "acousticness": round(sum(acousticness_values) / len(acousticness_values), 3) if acousticness_values else 0.5,
-        "instrumentalness": round(sum(instrumentalness_values) / len(instrumentalness_values), 3) if instrumentalness_values else 0.5,
+    profile = {
+        "energy": round(sum(energy_vals) / len(energy_vals), 3) if energy_vals else 0.5,
+        "valence": round(sum(valence_vals) / len(valence_vals), 3) if valence_vals else 0.5,
+        "danceability": round(sum(danceability_vals) / len(danceability_vals), 3) if danceability_vals else 0.5,
+        "acousticness": round(sum(acousticness_vals) / len(acousticness_vals), 3) if acousticness_vals else 0.5,
+        "instrumentalness": round(sum(instrumentalness_vals) / len(instrumentalness_vals), 3) if instrumentalness_vals else 0.5,
     }
-    await cache_set(ck, result, ttl=120)
-    return result
+    await cache_set(ck, profile, ttl=120)
+    return profile
 
 
 @router.get("/music-phases")
@@ -364,43 +353,43 @@ async def get_music_phases(
 
     period_start = get_period_start(period)
     
-    # Get plays
-    query = select(Play).where(
-        and_(
-            Play.user_id == user.id,
-            Play.energy.isnot(None),
-            Play.valence.isnot(None),
-        )
+    # Get plays joined with tracks so we can fall back to track-level features
+    query = select(Play, Track).join(Track, Play.track_id == Track.id).where(
+        Play.user_id == user.id,
     )
     if period_start:
         query = query.where(Play.started_at >= period_start)
     
     result = await db.execute(query.order_by(Play.started_at))
-    plays = result.scalars().all()
+    rows = result.all()
     
-    if not plays:
+    if not rows:
         return []
     
-    # Get tracks
-    track_ids = list(set(play.track_id for play in plays))
-    tracks_result = await db.execute(
-        select(Track).where(Track.id.in_(track_ids))
-    )
-    tracks = {track.id: track for track in tracks_result.scalars().all()}
+    # Build tracks dict and filter plays that have audio features (play-level or track-level)
+    tracks: dict = {}
+    plays_with_features: list[tuple] = []
+    
+    for play, track in rows:
+        tracks[track.id] = track
+        energy = play.energy if play.energy is not None else track.energy
+        valence = play.valence if play.valence is not None else track.valence
+        if energy is not None and valence is not None:
+            plays_with_features.append((play, float(energy), float(valence)))
+    
+    if not plays_with_features:
+        return []
     
     # Simple clustering into 3 phases based on energy/valence
-    phases = {"high_energy": [], "calm": [], "melancholy": []}
+    phases: dict[str, list[tuple]] = {"high_energy": [], "calm": [], "melancholy": []}
     
-    for play in plays:
-        energy = float(play.energy)
-        valence = float(play.valence)
-        
+    for play, energy, valence in plays_with_features:
         if energy > 0.6 and valence > 0.5:
-            phases["high_energy"].append(play)
+            phases["high_energy"].append((play, energy, valence))
         elif valence < 0.4:
-            phases["melancholy"].append(play)
+            phases["melancholy"].append((play, energy, valence))
         else:
-            phases["calm"].append(play)
+            phases["calm"].append((play, energy, valence))
     
     # Build phase data
     result_phases = []
@@ -414,20 +403,20 @@ async def get_music_phases(
         if not phase_plays:
             continue
         
-        avg_energy = sum(float(p.energy) for p in phase_plays) / len(phase_plays)
-        avg_valence = sum(float(p.valence) for p in phase_plays) / len(phase_plays)
+        avg_energy = sum(e for _, e, _ in phase_plays) / len(phase_plays)
+        avg_valence = sum(v for _, _, v in phase_plays) / len(phase_plays)
         
         # Get top genre
-        genre_counts = {}
-        for play in phase_plays:
+        genre_counts: dict[str, int] = {}
+        for play, _, _ in phase_plays:
             track = tracks.get(play.track_id)
             if track and track.primary_genre:
                 genre_counts[track.primary_genre] = genre_counts.get(track.primary_genre, 0) + 1
         top_genre = max(genre_counts.items(), key=lambda x: x[1])[0] if genre_counts else "Unknown"
         
         # Get top track (most played)
-        track_counts = {}
-        for play in phase_plays:
+        track_counts: dict = {}
+        for play, _, _ in phase_plays:
             track_counts[play.track_id] = track_counts.get(play.track_id, 0) + 1
         top_track_id = max(track_counts.items(), key=lambda x: x[1])[0]
         top_track = tracks[top_track_id]
@@ -450,7 +439,7 @@ async def get_music_phases(
             "avgEnergy": round(avg_energy, 3),
             "avgValence": round(avg_valence, 3),
             "topGenre": top_genre,
-            "trackCount": len(set(p.track_id for p in phase_plays)),
+            "trackCount": len(set(p.track_id for p, _, _ in phase_plays)),
             "topTrack": {
                 "name": top_track.name,
                 "artist": top_track.artist_name,
