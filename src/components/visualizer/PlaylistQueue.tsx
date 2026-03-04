@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import { useCurrentTrack, useRecentTracks } from '@/stores';
 
 interface QueuePanelProps {
@@ -58,13 +57,13 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
             <div className="flex items-center gap-3">
               {currentTrack.albumArt && !failedImages[currentTrack.albumArt] ? (
                 <div className="relative w-14 h-14 flex-shrink-0">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={currentTrack.albumArt}
                     alt={currentTrack.albumName || 'Album Art'}
-                    width={56}
-                    height={56}
-                    className="rounded-lg object-cover"
+                    className="rounded-lg object-cover w-14 h-14"
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                     onError={() => {
                       setFailedImages((prev) => ({
                         ...prev,
@@ -115,13 +114,13 @@ export function PlaylistQueue({ isOpen, onClose }: QueuePanelProps) {
                 </span>
                 {track.albumArt && !failedImages[track.albumArt] ? (
                   <div className="relative w-10 h-10 flex-shrink-0">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={track.albumArt}
                       alt={track.albumName || 'Album Art'}
-                      width={40}
-                      height={40}
-                      className="rounded object-cover"
+                      className="rounded object-cover w-10 h-10"
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       onError={() => {
                         setFailedImages((prev) => ({
                           ...prev,
