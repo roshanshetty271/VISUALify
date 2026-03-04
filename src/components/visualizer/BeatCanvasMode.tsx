@@ -553,7 +553,7 @@ export function BeatCanvasMode() {
     }
   }, []);
 
-  const selectedPreset = COLOR_PRESETS.find(c => c.id === colorId);
+
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-[#06060c]">
@@ -568,11 +568,10 @@ export function BeatCanvasMode() {
             <button
               key={s}
               onClick={() => setBrushStyle(s)}
-              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium tracking-wide transition-all duration-150 ${
-                brushStyle === s
+              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium tracking-wide transition-all duration-150 ${brushStyle === s
                   ? 'bg-[#1DB954] text-black'
                   : 'text-zinc-500 hover:text-white hover:bg-white/[0.08]'
-              }`}
+                }`}
             >
               {s === 'splash' ? 'Splash' : s === 'line' ? 'Line' : 'Dots'}
             </button>
@@ -587,11 +586,10 @@ export function BeatCanvasMode() {
               <button
                 key={c.id}
                 onClick={() => setColorId(c.id)}
-                className={`w-6 h-6 rounded-md border transition-all duration-150 ${
-                  colorId === c.id
+                className={`w-6 h-6 rounded-md border transition-all duration-150 ${colorId === c.id
                     ? 'border-white scale-110 shadow-[0_0_8px_rgba(255,255,255,0.3)]'
                     : 'border-white/10 hover:border-white/30'
-                }`}
+                  }`}
                 style={{
                   background: c.value
                     ? `hsl(${c.value.h}, ${c.value.s}%, ${c.value.l}%)`
@@ -609,11 +607,10 @@ export function BeatCanvasMode() {
             <button
               key={s}
               onClick={() => setBrushSize(s)}
-              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-all duration-150 ${
-                brushSize === s
+              className={`flex-1 flex items-center justify-center py-1 rounded-md transition-all duration-150 ${brushSize === s
                   ? 'bg-white/15 text-white'
                   : 'text-zinc-600 hover:text-white hover:bg-white/[0.06]'
-              }`}
+                }`}
             >
               <div
                 className="rounded-full bg-current"

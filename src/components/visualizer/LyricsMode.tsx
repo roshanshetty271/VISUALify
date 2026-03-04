@@ -160,7 +160,7 @@ export function LyricsMode() {
 
     const hue = valence < 0.3 ? 200 + Math.random() * 60
       : valence > 0.7 ? 20 + Math.random() * 40
-      : 100 + Math.random() * 100;
+        : 100 + Math.random() * 100;
 
     lineMetaRef.current.set(body.id, { text, hue, alpha: 1, font });
     Matter.Composite.add(engine.world, body);
@@ -202,7 +202,6 @@ export function LyricsMode() {
 
       const energy = audioFeatures?.energy ?? 0.5;
       const tempo = audioFeatures?.tempo ?? 120;
-      const valence = audioFeatures?.valence ?? 0.5;
       const kick = beatClock.kick(tempo);
       const beat = beatClock.beatIndex(tempo);
 
@@ -305,7 +304,7 @@ export function LyricsMode() {
       const bodies = Matter.Composite.allBodies(engine.world).filter(b => !b.isStatic);
       for (const body of bodies) {
         if (body.position.y > h + 120 || body.position.y < -200 ||
-            body.position.x < -200 || body.position.x > w + 200) {
+          body.position.x < -200 || body.position.x > w + 200) {
           Matter.Composite.remove(engine.world, body);
           lineMetaRef.current.delete(body.id);
         }

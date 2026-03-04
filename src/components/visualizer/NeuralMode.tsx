@@ -157,6 +157,7 @@ export function NeuralMode() {
     });
 
     setNodes(newNodes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.id, recentTracks, centerX, centerY]);
 
   // Build links
@@ -195,7 +196,7 @@ export function NeuralMode() {
     timeRef.current += 0.02;
     setNodes((prevNodes) => applyForces(prevNodes, links, centerX, centerY));
     animationRef.current = requestAnimationFrame(animate);
-  }, [links, centerX, centerY, energy]);
+  }, [links, centerX, centerY]);
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(animate);
@@ -227,7 +228,7 @@ export function NeuralMode() {
         <pattern id="neuralGrid" width="50" height="50" patternUnits="userSpaceOnUse">
           <circle cx="25" cy="25" r="1" fill="rgba(29, 185, 84, 0.1)" />
         </pattern>
-        
+
         {/* Glow filters */}
         <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
           <feGaussianBlur stdDeviation="6" result="blur" />
@@ -236,7 +237,7 @@ export function NeuralMode() {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        
+
         <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge>
@@ -280,7 +281,7 @@ export function NeuralMode() {
               strokeLinecap="round"
               filter="url(#lineGlow)"
             />
-            
+
             {/* Data flow particle */}
             {isPlaying && (
               <circle
@@ -314,7 +315,7 @@ export function NeuralMode() {
               fill={node.color}
               opacity={0.08}
             />
-            
+
             {/* Middle glow */}
             <circle
               cx={node.x}
@@ -323,7 +324,7 @@ export function NeuralMode() {
               fill={node.color}
               opacity={0.15}
             />
-            
+
             {/* Ring */}
             <circle
               cx={node.x}
@@ -334,7 +335,7 @@ export function NeuralMode() {
               strokeWidth="1.5"
               opacity={0.5}
             />
-            
+
             {/* Core */}
             <circle
               cx={node.x}
@@ -343,7 +344,7 @@ export function NeuralMode() {
               fill={node.color}
               filter="url(#nodeGlow)"
             />
-            
+
             {/* Highlight */}
             <circle
               cx={node.x - node.radius * 0.25}
@@ -352,7 +353,7 @@ export function NeuralMode() {
               fill="white"
               opacity={0.3}
             />
-            
+
             {/* Label for current track */}
             {node.isCurrent && (
               <text

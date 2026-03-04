@@ -139,7 +139,7 @@ export function GalaxyMode() {
     });
 
     return result;
-  }, [currentTrack, recentTracks, energy, tempo, centerX, centerY, colorScale]);
+  }, [currentTrack, recentTracks, energy, tempo, centerX, centerY, colorScale, orbitRadii]);
 
   const animatedNodes = useMemo(() => {
     const time = beatClock.now;

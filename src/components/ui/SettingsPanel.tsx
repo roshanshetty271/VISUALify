@@ -117,18 +117,14 @@ function ThemeSelector() {
 export function SettingsPanel() {
   const {
     animationSpeed,
-    particleCount,
     showStats,
     showTrackLabels,
     glowIntensity,
-    orbitSpeed,
     settingsPanelOpen,
     setAnimationSpeed,
-    setParticleCount,
     setShowStats,
     setShowTrackLabels,
     setGlowIntensity,
-    setOrbitSpeed,
     setSettingsPanelOpen,
     resetToDefaults,
   } = useSettingsStore();
