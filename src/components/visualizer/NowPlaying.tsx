@@ -4,7 +4,6 @@ import { useCurrentTrack, useAudioFeatures } from '@/stores';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { ProgressBar } from './ProgressBar';
 import { PlaybackControls } from './PlaybackControls';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 export function NowPlaying() {
@@ -29,11 +28,13 @@ export function NowPlaying() {
       <div className="flex items-center gap-4">
         {showAlbumArt ? (
           <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden shadow-lg shadow-black/40 ring-1 ring-white/[0.1]">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={track.albumArt}
-              alt={track.albumName}
-              fill
-              className="object-cover"
+              alt={track.albumName || 'Album Art'}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
               onError={() => setImageError(true)}
             />
           </div>

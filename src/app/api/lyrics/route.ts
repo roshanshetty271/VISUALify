@@ -47,9 +47,14 @@ export async function GET(req: NextRequest) {
     }
 
     const results = await searchRes.json();
-    const match = (results as Array<Record<string, unknown>>).find(
-      (r: Record<string, unknown>) => r.syncedLyrics || r.plainLyrics
+    // Prefer results with synced lyrics (timestamped) over plain-only
+    const syncedMatch = (results as Array<Record<string, unknown>>).find(
+      (r: Record<string, unknown>) => r.syncedLyrics
     );
+    const plainMatch = (results as Array<Record<string, unknown>>).find(
+      (r: Record<string, unknown>) => r.plainLyrics
+    );
+    const match = syncedMatch || plainMatch;
 
     if (!match) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });

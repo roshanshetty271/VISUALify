@@ -274,7 +274,7 @@ export function LyricsMode() {
             spawnLine(lineText, w, h, true);
           }
         }
-      } else if (hasPlain && isNewBeat && beat % 2 === 0) {
+      } else if (hasPlain && isNewBeat && beat % 4 === 0) {
         const line = lyrics.plain[plainIdxRef.current % lyrics.plain.length];
         plainIdxRef.current++;
         if (line.trim().length > 0) {

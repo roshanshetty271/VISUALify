@@ -27,11 +27,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export function useNowPlaying() {
   const { data: session } = useSession();
   const store = usePlayerStore();
-  
+
   // Backend token state
   const [backendToken, setBackendToken] = useState<string | null>(null);
   const [backendError, setBackendError] = useState<string | null>(null);
-  
+
   // WebSocket connection
   const { isConnected: wsConnected, error: wsError } = useWebSocket({
     token: backendToken,
@@ -95,11 +95,16 @@ export function useNowPlaying() {
         store.setProgress(data.progress_ms);
         store.setDuration(data.item.duration_ms);
 
-        // Fetch audio features
-        const features = await spotifyClient.getAudioFeatures(track.id, session.accessToken);
-        if (features) {
-          store.setAudioFeatures(features);
-        }
+        // Fetch audio features (non-blocking — don't let rate limits here block now-playing polling)
+        spotifyClient.getAudioFeatures(track.id, session.accessToken)
+          .then(features => {
+            if (features) {
+              store.setAudioFeatures(features);
+            }
+          })
+          .catch(err => {
+            console.warn('[useNowPlaying] Audio features fetch failed (non-blocking):', err?.status || err);
+          });
       } else {
         store.setCurrentTrack(null);
         store.setIsPlaying(false);
