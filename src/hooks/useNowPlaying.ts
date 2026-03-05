@@ -26,11 +26,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
  */
 export function useNowPlaying() {
   const { data: session } = useSession();
-  // Don't subscribe to the whole store or it will re-render every 50ms during progress updates
-  const isSyncing = usePlayerStore(s => s.isSyncing);
-  const isPlaying = usePlayerStore(s => s.isPlaying);
-  // Get actions stably
-  const actions = usePlayerStore.getState();
+  const store = usePlayerStore();
 
   // Backend token state
   const [backendToken, setBackendToken] = useState<string | null>(null);
@@ -46,7 +42,6 @@ export function useNowPlaying() {
   const isRateLimited = useRef(false);
   const rateLimitTimeout = useRef<NodeJS.Timeout | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
-  const lastTrackId = useRef<string | null>(null);
 
   // === BACKEND TOKEN EXCHANGE ===
   useEffect(() => {
@@ -86,8 +81,10 @@ export function useNowPlaying() {
     if (!session?.accessToken) return;
     if (!isManualSync && isRateLimited.current) return;
 
+    const s = usePlayerStore.getState();
+
     if (isManualSync) {
-      actions.setIsSyncing(true);
+      s.setIsSyncing(true);
     }
 
     try {
@@ -95,47 +92,32 @@ export function useNowPlaying() {
 
       if (data?.item && data.currently_playing_type === 'track') {
         const track = normalizeTrack(data.item);
-
-        // If track changed, add the previous track to recently played list (locally)
-        // This provides instant feedback before the Spotify recently-played API catch up
-        if (lastTrackId.current && lastTrackId.current !== track.id) {
-          const prevTrack = usePlayerStore.getState().currentTrack;
-          if (prevTrack) {
-            const currentRecent = usePlayerStore.getState().recentTracks;
-            // Prepend if not already there as the first item
-            if (currentRecent[0]?.id !== prevTrack.id) {
-              actions.setRecentTracks([prevTrack, ...currentRecent].slice(0, 30));
-            }
-          }
-        }
-        lastTrackId.current = track.id;
-
-        actions.setCurrentTrack(track);
-        actions.setIsPlaying(data.is_playing);
-        actions.setProgress(data.progress_ms);
-        actions.setDuration(data.item.duration_ms);
+        s.setCurrentTrack(track);
+        s.setIsPlaying(data.is_playing);
+        s.setProgress(data.progress_ms);
+        s.setDuration(data.item.duration_ms);
 
         // Fetch audio features (non-blocking — don't let rate limits here block now-playing polling)
         spotifyClient.getAudioFeatures(track.id, session.accessToken)
           .then(features => {
             if (features) {
-              actions.setAudioFeatures(features);
+              usePlayerStore.getState().setAudioFeatures(features);
             }
           })
           .catch(err => {
             console.warn('[useNowPlaying] Audio features fetch failed (non-blocking):', err?.status || err);
           });
       } else {
-        actions.setCurrentTrack(null);
-        actions.setIsPlaying(false);
-        actions.setAudioFeatures(null);
-        actions.setProgress(0);
-        actions.setDuration(0);
+        s.setCurrentTrack(null);
+        s.setIsPlaying(false);
+        s.setAudioFeatures(null);
+        s.setProgress(0);
+        s.setDuration(0);
       }
 
-      actions.setError(null);
-      actions.setIsLoading(false);
-      actions.setLastSyncTime(Date.now());
+      s.setError(null);
+      s.setIsLoading(false);
+      s.setLastSyncTime(Date.now());
     } catch (err) {
       if (err instanceof SpotifyAPIError) {
         if (err.status === 429) {
@@ -144,39 +126,37 @@ export function useNowPlaying() {
           rateLimitTimeout.current = setTimeout(() => {
             isRateLimited.current = false;
           }, delay);
-          if (!isManualSync) actions.setError('syncing');
+          if (!isManualSync) s.setError('syncing');
         } else if (err.status === 401) {
-          actions.setError('unauthorized');
+          s.setError('unauthorized');
         } else {
-          actions.setError(err.message);
+          s.setError(err.message);
         }
       } else {
-        actions.setError('Failed to fetch playback');
+        s.setError('Failed to fetch playback');
       }
-      actions.setIsLoading(false);
+      s.setIsLoading(false);
     } finally {
       if (isManualSync) {
-        actions.setIsSyncing(false);
+        usePlayerStore.getState().setIsSyncing(false);
       }
     }
-  }, [session?.accessToken]); // store removed from deps
+  }, [session?.accessToken]);
 
   // Manual sync function
   const forceSync = useCallback(() => {
     if (wsConnected) {
-      // If WebSocket connected, just update last sync time
-      // The server will push the latest state
-      actions.setLastSyncTime(Date.now());
+      usePlayerStore.getState().setLastSyncTime(Date.now());
     } else {
-      // Fallback to direct polling
       fetchNowPlaying(true);
     }
-  }, [wsConnected, fetchNowPlaying, actions]);
+  }, [wsConnected, fetchNowPlaying]);
 
+  // === LOCAL PROGRESS INTERPOLATION ===
   useEffect(() => {
-    if (isPlaying) {
+    if (store.isPlaying) {
       progressInterval.current = setInterval(() => {
-        actions.incrementProgress(PROGRESS_UPDATE_INTERVAL);
+        usePlayerStore.getState().incrementProgress(PROGRESS_UPDATE_INTERVAL);
       }, PROGRESS_UPDATE_INTERVAL);
     } else {
       if (progressInterval.current) {
@@ -189,7 +169,7 @@ export function useNowPlaying() {
         clearInterval(progressInterval.current);
       }
     };
-  }, [isPlaying, actions]);
+  }, [store.isPlaying]);
 
   const wsEnabled = !!process.env.NEXT_PUBLIC_WS_URL;
 
