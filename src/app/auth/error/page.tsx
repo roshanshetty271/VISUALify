@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { signIn, signOut } from 'next-auth/react';
 
 function AuthErrorContent() {
   const searchParams = useSearchParams();
@@ -45,6 +46,12 @@ function AuthErrorContent() {
 
   const { title, description } = errorMessages[error || 'Default'] || errorMessages.Default;
 
+  const handleRetry = async () => {
+    // Clear any stale session/cookies first, then start fresh login
+    await signOut({ redirect: false });
+    signIn('spotify', { callbackUrl: '/visualizer' });
+  };
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-zinc-900 rounded-2xl p-8 text-center">
@@ -61,12 +68,12 @@ function AuthErrorContent() {
 
         {/* Actions */}
         <div className="flex flex-col gap-3">
-          <Link
-            href="/api/auth/signin"
+          <button
+            onClick={handleRetry}
             className="w-full py-3 bg-green-500 text-black font-semibold rounded-full hover:bg-green-400 transition-colors"
           >
             Try Again
-          </Link>
+          </button>
           <Link
             href="/"
             className="w-full py-3 bg-zinc-800 text-white font-semibold rounded-full hover:bg-zinc-700 transition-colors"
