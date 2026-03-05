@@ -14,7 +14,10 @@ const handler = NextAuth({
       clientId: process.env.SPOTIFY_CLIENT_ID!,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
       authorization: {
-        params: { scope: scopes },
+        params: {
+          scope: scopes,
+          show_dialog: 'true'
+        },
       },
     }),
   ],
@@ -45,6 +48,18 @@ const handler = NextAuth({
   pages: {
     signIn: '/',
     error: '/auth/error',
+  },
+  debug: process.env.NODE_ENV === 'development' || !!process.env.VERCEL,
+  logger: {
+    error(code, metadata) {
+      console.error(`[next-auth][error][${code}]`, metadata);
+    },
+    warn(code) {
+      console.warn(`[next-auth][warn][${code}]`);
+    },
+    debug(code, metadata) {
+      console.log(`[next-auth][debug][${code}]`, metadata);
+    },
   },
 });
 

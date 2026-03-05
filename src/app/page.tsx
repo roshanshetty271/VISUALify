@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { LoginButton } from '@/components/auth';
 
 const MODES = [
@@ -68,6 +68,15 @@ function HomeContent() {
               </svg>
               <div className="text-left">
                 <p className="text-sm text-red-700">{authError}</p>
+                <button
+                  onClick={async () => {
+                    await signOut({ redirect: false });
+                    signIn('spotify', { callbackUrl: '/visualizer' });
+                  }}
+                  className="mt-2 text-xs font-bold uppercase tracking-wider text-red-600 hover:text-red-800 underline underline-offset-2"
+                >
+                  Clear session & try again
+                </button>
               </div>
               <button
                 onClick={() => setAuthError(null)}
@@ -149,14 +158,16 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-32 px-6 bg-[#1DB954]">
         <div className="max-w-5xl mx-auto flex flex-col items-center text-center">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-10">
             See what you hear.
           </h2>
           <button
-            onClick={() => signIn('spotify', { callbackUrl: '/visualizer' })}
+            onClick={async () => {
+              await signOut({ redirect: false });
+              signIn('spotify', { callbackUrl: '/visualizer' });
+            }}
             className="inline-flex items-center gap-3 px-8 py-4 bg-white text-[#1DB954] font-bold text-lg rounded-full transition-all duration-200 hover:bg-zinc-50 hover:scale-[1.02]"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
